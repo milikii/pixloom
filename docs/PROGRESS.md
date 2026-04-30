@@ -16,3 +16,13 @@ Pixloom v1 implementation is being prepared from `docs/superpowers/plans/2026-04
 ## Verification
 
 - Implementation not started yet.
+
+## Pixloom V1 Runtime Smoke Test
+
+- `pytest -v`: passed
+- `docker compose build`: passed
+- `docker compose up -d`: passed
+- Loopback binding: confirmed on `127.0.0.1:7860`
+- `docker compose down`: passed
+
+No real model acceptance test has been recorded yet.
