@@ -52,9 +52,16 @@ class UpscaleBackend(Protocol):
 
 
 class BackendRunner:
+    def __init__(self) -> None:
+        self._spandrel_backend = None
+
     def upscale(self, request: UpscaleRequest) -> Image.Image:
         if request.model.backend == "spandrel":
-            raise InferenceError("Spandrel backend is not wired yet.")
+            if self._spandrel_backend is None:
+                from app.spandrel_backend import SpandrelBackend
+
+                self._spandrel_backend = SpandrelBackend()
+            return self._spandrel_backend.upscale(request)
         raise InferenceError(f"Backend {request.model.backend} is not implemented in v1.")
 
 
