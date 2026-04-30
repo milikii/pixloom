@@ -80,3 +80,26 @@ def test_spandrel_backend_returns_rgb_image(monkeypatch, tmp_path, tiny_png):
 
     assert isinstance(result, Image.Image)
     assert result.mode == "RGB"
+
+
+def test_spandrel_backend_processes_multiple_tiles(tmp_path):
+    calls = []
+
+    class CountingModel(FakeModel):
+        def __call__(self, tensor):
+            calls.append(tuple(tensor.shape))
+            return super().__call__(tensor)
+
+    input_path = tmp_path / "wide.png"
+    Image.new("RGB", (70, 40), color=(10, 20, 30)).save(input_path)
+    backend = SpandrelBackend(load_model=lambda path: CountingModel())
+    request = UpscaleRequest(
+        input_path=input_path,
+        model=_model(tmp_path),
+        config=AppConfig(tile_size=32, tile_overlap=4),
+    )
+
+    result = backend.upscale(request)
+
+    assert result.size == (140, 80)
+    assert len(calls) > 1
