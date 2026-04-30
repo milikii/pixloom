@@ -30,7 +30,7 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
 def test_list_available_models_hides_missing_and_disabled_models(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
-    (models_dir / "future-span.pth").write_bytes(b"fake")
+    (models_dir / "SPAN_4x.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -60,3 +60,23 @@ def test_resolve_model_rejects_unknown_model_id(tmp_path):
 def test_resolve_model_rejects_missing_model_file(tmp_path):
     with pytest.raises(ModelNotFoundError, match="Model file is missing"):
         resolve_model("realesrgan-x4plus", tmp_path, get_default_registry())
+
+
+def test_resolve_model_rejects_disabled_model_even_when_file_exists(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "SPAN_4x.pth").write_bytes(b"fake")
+
+    with pytest.raises(ModelNotFoundError, match="Model is disabled"):
+        resolve_model("span-4x", models_dir, get_default_registry())
+
+
+def test_registry_functions_honor_explicit_empty_registry(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
+
+    assert list_available_models(models_dir, ()) == []
+
+    with pytest.raises(ModelNotFoundError, match="Unknown model id: realesrgan-x4plus"):
+        resolve_model("realesrgan-x4plus", models_dir, ())
