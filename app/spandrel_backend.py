@@ -24,7 +24,12 @@ class SpandrelBackend:
         stat = path.stat()
         key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
         if key not in self._cache:
-            model = self._load_model(path)
+            try:
+                model = self._load_model(path)
+            except ImportError as exc:
+                raise InferenceError(
+                    "PyTorch, torchvision, and Spandrel must be installed for the spandrel backend."
+                ) from exc
             if hasattr(model, "eval"):
                 model = model.eval()
             if hasattr(model, "to"):
