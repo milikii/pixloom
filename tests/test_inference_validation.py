@@ -80,6 +80,16 @@ def test_validate_upload_rejects_large_image(tmp_path):
         validate_upload(path, config)
 
 
+def test_validate_upload_rejects_oversized_file_before_decode(tmp_path):
+    path = tmp_path / "large.png"
+    path.write_bytes(b"x" * 11)
+
+    config = AppConfig(input_dir=tmp_path, max_upload_bytes=10)
+
+    with pytest.raises(InferenceError, match="maximum upload size"):
+        validate_upload(path, config)
+
+
 def test_run_upscale_with_fake_backend_writes_output(tmp_path, tiny_png):
     config = AppConfig(
         input_dir=tmp_path / "input",
