@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from app.config import AppConfig
+from app.inference import InferenceError
 from app.inference import UpscaleRequest
 from app.model_registry import ResolvedModel
 from app.spandrel_backend import SpandrelBackend
@@ -103,3 +105,17 @@ def test_spandrel_backend_processes_multiple_tiles(tmp_path):
 
     assert result.size == (140, 80)
     assert len(calls) > 1
+
+
+def test_spandrel_backend_maps_loader_import_error(tmp_path, tiny_png):
+    backend = SpandrelBackend(
+        load_model=lambda path: (_ for _ in ()).throw(ImportError("missing spandrel"))
+    )
+    request = UpscaleRequest(
+        input_path=tiny_png,
+        model=_model(tmp_path),
+        config=AppConfig(tile_size=32, tile_overlap=0),
+    )
+
+    with pytest.raises(InferenceError, match="must be installed for the spandrel backend"):
+        backend.upscale(request)
