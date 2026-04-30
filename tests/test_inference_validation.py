@@ -41,3 +41,10 @@ def test_validate_upload_rejects_large_image(tmp_path):
 
     with pytest.raises(InferenceError, match="exceeds the maximum input side"):
         validate_upload(path, config)
+
+
+def test_validate_upload_rejects_large_file_size(tmp_path, tiny_png):
+    config = AppConfig(input_dir=tmp_path, max_upload_bytes=1)
+
+    with pytest.raises(InferenceError, match="maximum upload size"):
+        validate_upload(tiny_png, config)

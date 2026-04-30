@@ -35,13 +35,30 @@ def _slug(value: str) -> str:
 
 
 def _timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+
+
+def _unique_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+
+    counter = 2
+    while True:
+        candidate = path.with_name(f"{path.stem}-{counter}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+        counter += 1
 
 
 def validate_upload(path: Path, config: AppConfig) -> UploadInfo:
     suffix = path.suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         raise InferenceError("Supported formats are PNG, JPG, JPEG, and WEBP.")
+
+    if path.stat().st_size > config.max_upload_bytes:
+        raise InferenceError(
+            f"Uploaded file exceeds the maximum upload size of {config.max_upload_bytes} bytes."
+        )
 
     try:
         with Image.open(path) as image:
@@ -64,7 +81,7 @@ def persist_upload(path: Path, config: AppConfig, original_name: str | None = No
     config.input_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _slug(original_name or path.name)
     suffix = path.suffix.lower()
-    stored_path = config.input_dir / f"{_timestamp()}_{safe_name}{suffix}"
+    stored_path = _unique_path(config.input_dir / f"{_timestamp()}_{safe_name}{suffix}")
     shutil.copy2(path, stored_path)
     return stored_path
 
@@ -89,4 +106,4 @@ def build_output_path(
     extension = "jpg" if save_format == "JPEG" else save_format.lower()
     original_slug = _slug(original_name)
     filename = f"{_timestamp()}_{original_slug}_{model.id}_{model.scale}x.{extension}"
-    return config.output_dir / filename
+    return _unique_path(config.output_dir / filename)
