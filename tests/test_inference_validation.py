@@ -182,16 +182,26 @@ def test_default_backend_runner_rejects_unimplemented_backend(tmp_path, tiny_png
         )
 
 
-def test_default_backend_runner_rejects_unwired_spandrel_backend(tmp_path, tiny_png):
+def test_default_backend_runner_delegates_to_spandrel_backend(monkeypatch, tmp_path, tiny_png):
+    from app import spandrel_backend
+
+    class FakeSpandrelBackend:
+        def upscale(self, request: UpscaleRequest):
+            with Image.open(request.input_path) as image:
+                return image.resize((image.width * 4, image.height * 4))
+
+    monkeypatch.setattr(spandrel_backend, "SpandrelBackend", FakeSpandrelBackend)
+
     config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
 
-    with pytest.raises(InferenceError, match="Spandrel backend is not wired yet."):
-        run_upscale(
-            image_path=tiny_png,
-            original_name="sample.png",
-            model=_model(tmp_path, backend="spandrel"),
-            config=config,
-            output_format="PNG",
-            quality=90,
-            backend=BackendRunner(),
-        )
+    result = run_upscale(
+        image_path=tiny_png,
+        original_name="sample.png",
+        model=_model(tmp_path, backend="spandrel"),
+        config=config,
+        output_format="PNG",
+        quality=90,
+        backend=BackendRunner(),
+    )
+
+    assert result.output_size == (32, 24)
