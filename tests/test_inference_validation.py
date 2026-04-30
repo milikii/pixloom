@@ -133,6 +133,25 @@ def test_run_upscale_rejects_too_large_output(tmp_path, tiny_png):
         )
 
 
+def test_run_upscale_rejects_invalid_output_format_before_persisting_input(
+    tmp_path, tiny_png
+):
+    config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
+
+    with pytest.raises(InferenceError, match="Output format must be PNG, JPG, JPEG, or WEBP."):
+        run_upscale(
+            image_path=tiny_png,
+            original_name="sample.png",
+            model=_model(tmp_path),
+            config=config,
+            output_format="TIFF",
+            quality=90,
+            backend=FakeBackend(),
+        )
+
+    assert list(config.input_dir.iterdir()) == []
+
+
 def test_run_upscale_maps_backend_failure_to_readable_error(tmp_path, tiny_png):
     config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
 
@@ -156,6 +175,21 @@ def test_default_backend_runner_rejects_unimplemented_backend(tmp_path, tiny_png
             image_path=tiny_png,
             original_name="sample.png",
             model=_model(tmp_path, backend="onnxruntime"),
+            config=config,
+            output_format="PNG",
+            quality=90,
+            backend=BackendRunner(),
+        )
+
+
+def test_default_backend_runner_rejects_unwired_spandrel_backend(tmp_path, tiny_png):
+    config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
+
+    with pytest.raises(InferenceError, match="Spandrel backend is not wired yet."):
+        run_upscale(
+            image_path=tiny_png,
+            original_name="sample.png",
+            model=_model(tmp_path, backend="spandrel"),
             config=config,
             output_format="PNG",
             quality=90,

@@ -160,6 +160,7 @@ def run_upscale(
 ) -> UpscaleResult:
     config.ensure_directories()
     upload = validate_upload(image_path, config)
+    normalize_output_format(output_format)
     expected_output_side = max(upload.width, upload.height) * model.scale
     if expected_output_side > config.max_output_side:
         raise InferenceError(
