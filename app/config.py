@@ -41,6 +41,16 @@ def _env_int(name: str, default: int) -> int:
     return value
 
 
+def _env_non_negative_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    value = int(raw)
+    if value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return value
+
+
 def _load_gradio_auth() -> tuple[str, str] | None:
     username = os.environ.get("GRADIO_AUTH_USER", "").strip()
     password = os.environ.get("GRADIO_AUTH_PASS", "")
@@ -61,7 +71,7 @@ def load_config() -> AppConfig:
         max_output_side=_env_int("PIXLOOM_MAX_OUTPUT_SIDE", 8192),
         max_upload_bytes=_env_int("PIXLOOM_MAX_UPLOAD_BYTES", 25 * 1024 * 1024),
         tile_size=_env_int("PIXLOOM_TILE_SIZE", 256),
-        tile_overlap=_env_int("PIXLOOM_TILE_OVERLAP", 16),
+        tile_overlap=_env_non_negative_int("PIXLOOM_TILE_OVERLAP", 16),
         server_name=os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"),
         server_port=_env_int("GRADIO_SERVER_PORT", 7860),
         gradio_auth=_load_gradio_auth(),
