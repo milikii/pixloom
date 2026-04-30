@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from app.config import AppConfig
-from app.inference import build_output_path, persist_upload
+from app.inference import build_output_path, normalize_output_format, persist_upload
 from app.model_registry import ResolvedModel
 
 
@@ -60,3 +61,28 @@ def test_saved_output_can_be_written(tmp_path):
     Image.new("RGB", (4, 4)).save(output_path)
 
     assert output_path.is_file()
+
+
+def test_build_output_path_avoids_overwriting_existing_path(tmp_path):
+    config = AppConfig(output_dir=tmp_path / "output")
+    config.ensure_directories()
+
+    first = build_output_path(config, _model(), "sample.png", "PNG")
+    first.touch()
+    second = build_output_path(config, _model(), "sample.png", "PNG")
+
+    assert second != first
+    assert second.parent == first.parent
+    assert second.suffix == ".png"
+    assert "realesrgan-x4plus" in second.name
+
+
+def test_normalize_output_format_maps_jpg_to_jpeg():
+    assert normalize_output_format("JPG") == "JPEG"
+
+
+def test_normalize_output_format_rejects_unknown_format():
+    from app.inference import InferenceError
+
+    with pytest.raises(InferenceError, match="Output format must be PNG, JPG, JPEG, or WEBP."):
+        normalize_output_format("TIFF")
