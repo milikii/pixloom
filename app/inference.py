@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+import re
+import shutil
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+from PIL import Image, UnidentifiedImageError
+
+from app.config import AppConfig
+from app.model_registry import ResolvedModel
+
+
+SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+SUPPORTED_SAVE_FORMATS = {"PNG", "JPG", "JPEG", "WEBP"}
+
+
+class InferenceError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class UploadInfo:
+    path: Path
+    width: int
+    height: int
+    format: str
+
+
+def _slug(value: str) -> str:
+    stem = Path(value).stem
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip(".-_")
+    return slug or "image"
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+
+
+def validate_upload(path: Path, config: AppConfig) -> UploadInfo:
+    suffix = path.suffix.lower()
+    if suffix not in SUPPORTED_EXTENSIONS:
+        raise InferenceError("Supported formats are PNG, JPG, JPEG, and WEBP.")
+
+    try:
+        with Image.open(path) as image:
+            image.load()
+            width, height = image.size
+            image_format = image.format or suffix.lstrip(".").upper()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise InferenceError("The uploaded file could not be decoded as an image.") from exc
+
+    if max(width, height) > config.max_input_side:
+        raise InferenceError(
+            f"Input image {width}x{height} exceeds the maximum input side "
+            f"of {config.max_input_side}px."
+        )
+
+    return UploadInfo(path=path, width=width, height=height, format=image_format)
+
+
+def persist_upload(path: Path, config: AppConfig, original_name: str | None = None) -> Path:
+    config.input_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = _slug(original_name or path.name)
+    suffix = path.suffix.lower()
+    stored_path = config.input_dir / f"{_timestamp()}_{safe_name}{suffix}"
+    shutil.copy2(path, stored_path)
+    return stored_path
+
+
+def normalize_output_format(output_format: str) -> str:
+    normalized = output_format.upper()
+    if normalized not in SUPPORTED_SAVE_FORMATS:
+        raise InferenceError("Output format must be PNG, JPG, JPEG, or WEBP.")
+    if normalized == "JPG":
+        return "JPEG"
+    return normalized
+
+
+def build_output_path(
+    config: AppConfig,
+    model: ResolvedModel,
+    original_name: str,
+    output_format: str,
+) -> Path:
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    save_format = normalize_output_format(output_format)
+    extension = "jpg" if save_format == "JPEG" else save_format.lower()
+    original_slug = _slug(original_name)
+    filename = f"{_timestamp()}_{original_slug}_{model.id}_{model.scale}x.{extension}"
+    return config.output_dir / filename
