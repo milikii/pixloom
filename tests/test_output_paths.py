@@ -67,14 +67,41 @@ def test_build_output_path_avoids_overwriting_existing_path(tmp_path):
     config = AppConfig(output_dir=tmp_path / "output")
     config.ensure_directories()
 
-    first = build_output_path(config, _model(), "sample.png", "PNG")
-    first.touch()
-    second = build_output_path(config, _model(), "sample.png", "PNG")
+    from app import inference
+
+    original_timestamp = inference._timestamp
+    inference._timestamp = lambda: "20260430-120000-000000"
+    try:
+        first = build_output_path(config, _model(), "sample.png", "PNG")
+        first.touch()
+        second = build_output_path(config, _model(), "sample.png", "PNG")
+    finally:
+        inference._timestamp = original_timestamp
 
     assert second != first
     assert second.parent == first.parent
     assert second.suffix == ".png"
     assert "realesrgan-x4plus" in second.name
+
+
+def test_persist_upload_avoids_overwriting_existing_path(tmp_path, tiny_png):
+    from app import inference
+
+    config = AppConfig(input_dir=tmp_path / "input")
+    config.ensure_directories()
+
+    original_timestamp = inference._timestamp
+    inference._timestamp = lambda: "20260430-120000-000000"
+    try:
+        first = persist_upload(tiny_png, config, original_name="sample.png")
+        second = persist_upload(tiny_png, config, original_name="sample.png")
+    finally:
+        inference._timestamp = original_timestamp
+
+    assert first != second
+    assert first.parent == config.input_dir
+    assert second.parent == config.input_dir
+    assert second.stem.endswith("-2")
 
 
 def test_normalize_output_format_maps_jpg_to_jpeg():
