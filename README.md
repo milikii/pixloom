@@ -164,16 +164,16 @@ The test suite uses fake models and generated tiny images. It does not require r
 Record one real NAS test after placing at least one model in `models/`:
 
 ```text
-Date:
-Device:
-Input file:
-Input size:
-Model:
-Output format:
-Elapsed time:
-Output size:
-Output path:
-Result notes:
+Date: 2026-04-30
+Device: Debian 13 x86_64, Docker CPU-only
+Input file: input/image-dabc1f26-17ef-4e44-91e9-2b55b44c6da0-0.png
+Input size: 1402x1122
+Model: Real-ESRGAN 4x Anime
+Output format: PNG
+Elapsed time: 92.11s
+Output size: 5608x4488
+Output path: output/20260430-031033-809102_image-dabc1f26-17ef-4e44-91e9-2b55b44c6da0-0_realesrgan-x4plus-anime_4x.png
+Result notes: CPU-only upscale completed successfully and the output file was written under output/
 ```
 
 Acceptance criteria:
