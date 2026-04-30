@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import re
 import shutil
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol
 
 from PIL import Image, UnidentifiedImageError
 
@@ -26,6 +28,34 @@ class UploadInfo:
     width: int
     height: int
     format: str
+
+
+@dataclass(frozen=True)
+class UpscaleRequest:
+    input_path: Path
+    model: ResolvedModel
+    config: AppConfig
+
+
+@dataclass(frozen=True)
+class UpscaleResult:
+    input_path: Path
+    output_path: Path
+    input_size: tuple[int, int]
+    output_size: tuple[int, int]
+    model_name: str
+    elapsed_seconds: float
+
+
+class UpscaleBackend(Protocol):
+    def upscale(self, request: UpscaleRequest) -> Image.Image: ...
+
+
+class BackendRunner:
+    def upscale(self, request: UpscaleRequest) -> Image.Image:
+        if request.model.backend == "spandrel":
+            raise InferenceError("Spandrel backend is not wired yet.")
+        raise InferenceError(f"Backend {request.model.backend} is not implemented in v1.")
 
 
 def _slug(value: str) -> str:
@@ -107,3 +137,62 @@ def build_output_path(
     original_slug = _slug(original_name)
     filename = f"{_timestamp()}_{original_slug}_{model.id}_{model.scale}x.{extension}"
     return _unique_path(config.output_dir / filename)
+
+
+def _save_image(image: Image.Image, output_path: Path, output_format: str, quality: int) -> None:
+    save_format = normalize_output_format(output_format)
+    save_kwargs: dict[str, int] = {}
+    if save_format in {"JPEG", "WEBP"}:
+        save_kwargs["quality"] = max(1, min(100, int(quality)))
+    if save_format == "JPEG" and image.mode not in {"RGB", "L"}:
+        image = image.convert("RGB")
+    image.save(output_path, format=save_format, **save_kwargs)
+
+
+def run_upscale(
+    image_path: Path,
+    original_name: str,
+    model: ResolvedModel,
+    config: AppConfig,
+    output_format: str,
+    quality: int,
+    backend: UpscaleBackend | None = None,
+) -> UpscaleResult:
+    config.ensure_directories()
+    upload = validate_upload(image_path, config)
+    expected_output_side = max(upload.width, upload.height) * model.scale
+    if expected_output_side > config.max_output_side:
+        raise InferenceError(
+            f"Output side {expected_output_side}px exceeds the maximum output side "
+            f"of {config.max_output_side}px."
+        )
+
+    stored_input = persist_upload(image_path, config, original_name)
+    output_path = build_output_path(config, model, original_name, output_format)
+    runner = backend or BackendRunner()
+    started = time.perf_counter()
+
+    try:
+        output_image = runner.upscale(
+            UpscaleRequest(input_path=stored_input, model=model, config=config)
+        )
+    except InferenceError:
+        raise
+    except Exception as exc:
+        raise InferenceError(f"Upscaling failed while running {model.display_name}.") from exc
+
+    try:
+        _save_image(output_image, output_path, output_format, quality)
+        output_size = output_image.size
+    finally:
+        output_image.close()
+
+    elapsed = time.perf_counter() - started
+    return UpscaleResult(
+        input_path=stored_input,
+        output_path=output_path,
+        input_size=(upload.width, upload.height),
+        output_size=output_size,
+        model_name=model.display_name,
+        elapsed_seconds=elapsed,
+    )
