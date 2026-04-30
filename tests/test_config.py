@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.config import AppConfig, load_config
 
 
@@ -81,3 +83,33 @@ def test_app_config_ensures_directories(tmp_path):
     assert config.input_dir.is_dir()
     assert config.output_dir.is_dir()
     assert config.logs_dir.is_dir()
+
+
+def test_load_config_accepts_zero_tile_overlap(monkeypatch):
+    monkeypatch.setenv("PIXLOOM_TILE_OVERLAP", "0")
+
+    config = load_config()
+
+    assert config.tile_overlap == 0
+
+
+@pytest.mark.parametrize(
+    ("username", "password"),
+    [
+        ("alice", ""),
+        ("", "secret"),
+    ],
+)
+def test_load_config_rejects_partial_gradio_auth(monkeypatch, username, password):
+    monkeypatch.setenv("GRADIO_AUTH_USER", username)
+    monkeypatch.setenv("GRADIO_AUTH_PASS", password)
+
+    with pytest.raises(ValueError, match="must be set together"):
+        load_config()
+
+
+def test_load_config_rejects_negative_tile_overlap(monkeypatch):
+    monkeypatch.setenv("PIXLOOM_TILE_OVERLAP", "-1")
+
+    with pytest.raises(ValueError, match="PIXLOOM_TILE_OVERLAP"):
+        load_config()
