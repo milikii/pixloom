@@ -51,7 +51,7 @@ def handle_upscale(
         )
     except StopIteration:
         return None, None, f"Error: selected model is not available: {model_id}"
-    except (InferenceError, RuntimeError, ValueError) as exc:
+    except (InferenceError, ValueError) as exc:
         return None, None, f"Error: {exc}"
 
     return str(result.output_path), str(result.output_path), _status(result)
@@ -63,6 +63,27 @@ def build_demo(config: AppConfig | None = None) -> gr.Blocks:
     models = list_available_models(runtime_config.models_dir)
     choices = _model_choices(models)
     default_model = choices[0][1] if choices else None
+    initial_status = ""
+    if not choices:
+        initial_status = (
+            "No installed models found. Place model files in the models directory "
+            "and restart the app."
+        )
+
+    def on_submit(
+        image_path: str | None,
+        model_id: str,
+        output_format: str,
+        quality: int,
+    ) -> tuple[str | None, str | None, str]:
+        return handle_upscale(
+            image_path=image_path,
+            model_id=model_id,
+            output_format=output_format,
+            quality=quality,
+            config=runtime_config,
+            models=models,
+        )
 
     with gr.Blocks(title="Pixloom") as demo:
         gr.Markdown("# Pixloom")
@@ -92,29 +113,17 @@ def build_demo(config: AppConfig | None = None) -> gr.Blocks:
                     value=90,
                     step=1,
                 )
-                submit = gr.Button("Upscale", variant="primary")
+                submit = gr.Button("Upscale", variant="primary", interactive=bool(choices))
             with gr.Column():
                 preview = gr.Image(label="Preview", type="filepath")
                 download = gr.File(label="Download")
-                status = gr.Textbox(label="Status", lines=6)
+                status = gr.Textbox(label="Status", lines=6, value=initial_status)
 
         if choices:
             submit.click(
-                fn=lambda image_path, model_id, fmt, q: handle_upscale(
-                    image_path=image_path,
-                    model_id=model_id,
-                    output_format=fmt,
-                    quality=q,
-                    config=runtime_config,
-                    models=models,
-                ),
+                fn=on_submit,
                 inputs=[image_input, model_input, output_format, quality],
                 outputs=[preview, download, status],
-            )
-        else:
-            status.value = (
-                "No installed models found. Place model files in the models directory "
-                "and restart the app."
             )
 
     return demo
