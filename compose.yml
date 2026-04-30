@@ -1,0 +1,26 @@
+services:
+  upscale-webui:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: pixloom-upscale-webui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7860:7860"
+    environment:
+      PIXLOOM_MODELS_DIR: /data/models
+      PIXLOOM_INPUT_DIR: /data/input
+      PIXLOOM_OUTPUT_DIR: /data/output
+      PIXLOOM_LOGS_DIR: /data/logs
+      PIXLOOM_MAX_INPUT_SIDE: "2048"
+      PIXLOOM_MAX_OUTPUT_SIDE: "8192"
+      PIXLOOM_MAX_UPLOAD_BYTES: "26214400"
+      PIXLOOM_TILE_SIZE: "256"
+      PIXLOOM_TILE_OVERLAP: "16"
+      GRADIO_SERVER_NAME: "0.0.0.0"
+      GRADIO_SERVER_PORT: "7860"
+    volumes:
+      - ./models:/data/models
+      - ./input:/data/input
+      - ./output:/data/output
+      - ./logs:/data/logs
