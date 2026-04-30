@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from app.app import handle_upscale
 from app.config import AppConfig
-from app.inference import UpscaleResult
+from app.inference import InferenceError, UpscaleResult
 from app.model_registry import ResolvedModel
 
 
@@ -67,9 +68,21 @@ def test_handle_upscale_returns_preview_download_and_status(tmp_path, tiny_png):
     assert "8x6" in status
     assert "32x24" in status
     assert "1.25s" in status
+    assert service.calls == [
+        {
+            "image_path": tiny_png,
+            "original_name": tiny_png.name,
+            "model": _model(tmp_path),
+            "config": AppConfig(models_dir=tmp_path),
+            "output_format": "PNG",
+            "quality": 90,
+        }
+    ]
 
 
 def test_handle_upscale_maps_error_to_status(tmp_path, tiny_png):
+    service = FakeService(InferenceError("boom"))
+
     preview, download, status = handle_upscale(
         image_path=str(tiny_png),
         model_id="fake-4x",
@@ -77,9 +90,53 @@ def test_handle_upscale_maps_error_to_status(tmp_path, tiny_png):
         quality=90,
         config=AppConfig(models_dir=tmp_path),
         models=[_model(tmp_path)],
-        service=FakeService(RuntimeError("boom")),
+        service=service,
     )
 
     assert preview is None
     assert download is None
     assert status == "Error: boom"
+    assert len(service.calls) == 1
+
+
+def test_handle_upscale_rejects_missing_image(tmp_path):
+    preview, download, status = handle_upscale(
+        image_path=None,
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        config=AppConfig(models_dir=tmp_path),
+        models=[],
+    )
+
+    assert preview is None
+    assert download is None
+    assert status == "Error: upload an image first."
+
+
+def test_handle_upscale_rejects_unknown_model_id(tmp_path, tiny_png):
+    preview, download, status = handle_upscale(
+        image_path=str(tiny_png),
+        model_id="missing",
+        output_format="PNG",
+        quality=90,
+        config=AppConfig(models_dir=tmp_path),
+        models=[_model(tmp_path)],
+    )
+
+    assert preview is None
+    assert download is None
+    assert status == "Error: selected model is not available: missing"
+
+
+def test_handle_upscale_does_not_swallow_unexpected_runtime_error(tmp_path, tiny_png):
+    with pytest.raises(RuntimeError, match="boom"):
+        handle_upscale(
+            image_path=str(tiny_png),
+            model_id="fake-4x",
+            output_format="PNG",
+            quality=90,
+            config=AppConfig(models_dir=tmp_path),
+            models=[_model(tmp_path)],
+            service=FakeService(RuntimeError("boom")),
+        )
