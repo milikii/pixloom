@@ -156,6 +156,13 @@ def _save_image(image: Image.Image, output_path: Path, output_format: str, quali
     image.save(output_path, format=save_format, **save_kwargs)
 
 
+def _unlink_if_exists(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def run_upscale(
     image_path: Path,
     original_name: str,
@@ -185,13 +192,19 @@ def run_upscale(
             UpscaleRequest(input_path=stored_input, model=model, config=config)
         )
     except InferenceError:
+        _unlink_if_exists(stored_input)
         raise
     except Exception as exc:
+        _unlink_if_exists(stored_input)
         raise InferenceError(f"Upscaling failed while running {model.display_name}.") from exc
 
     try:
         _save_image(output_image, output_path, output_format, quality)
         output_size = output_image.size
+    except Exception:
+        _unlink_if_exists(output_path)
+        _unlink_if_exists(stored_input)
+        raise
     finally:
         output_image.close()
 

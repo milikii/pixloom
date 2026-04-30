@@ -30,6 +30,14 @@ class FailingBackend:
         raise RuntimeError("backend exploded")
 
 
+class SaveFailingBackend:
+    def upscale(self, request: UpscaleRequest):
+        with Image.open(request.input_path) as image:
+            return image.resize(
+                (image.width * request.model.scale, image.height * request.model.scale)
+            )
+
+
 def _model(tmp_path: Path, backend: str = "spandrel") -> ResolvedModel:
     model_path = tmp_path / "model.pth"
     model_path.write_bytes(b"fake")
@@ -166,6 +174,8 @@ def test_run_upscale_maps_backend_failure_to_readable_error(tmp_path, tiny_png):
             backend=FailingBackend(),
         )
 
+    assert list(config.input_dir.iterdir()) == []
+
 
 def test_default_backend_runner_rejects_unimplemented_backend(tmp_path, tiny_png):
     config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
@@ -205,3 +215,28 @@ def test_default_backend_runner_delegates_to_spandrel_backend(monkeypatch, tmp_p
     )
 
     assert result.output_size == (32, 24)
+
+
+def test_run_upscale_rolls_back_files_when_save_fails(tmp_path, tiny_png, monkeypatch):
+    config = AppConfig(input_dir=tmp_path / "input", output_dir=tmp_path / "output")
+
+    def fail_save(*args, **kwargs):
+        output_path = args[1]
+        output_path.write_bytes(b"partial")
+        raise OSError("disk full")
+
+    monkeypatch.setattr("app.inference._save_image", fail_save)
+
+    with pytest.raises(OSError, match="disk full"):
+        run_upscale(
+            image_path=tiny_png,
+            original_name="sample.png",
+            model=_model(tmp_path),
+            config=config,
+            output_format="PNG",
+            quality=90,
+            backend=SaveFailingBackend(),
+        )
+
+    assert list(config.input_dir.iterdir()) == []
+    assert list(config.output_dir.iterdir()) == []
