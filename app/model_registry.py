@@ -134,7 +134,7 @@ def list_available_models(
     models_dir: Path,
     registry: tuple[ModelDefinition, ...] | None = None,
 ) -> list[ResolvedModel]:
-    definitions = registry or get_default_registry()
+    definitions = registry if registry is not None else get_default_registry()
     resolved = [definition.with_models_dir(models_dir) for definition in definitions]
     return [
         model
@@ -148,7 +148,7 @@ def resolve_model(
     models_dir: Path,
     registry: tuple[ModelDefinition, ...] | None = None,
 ) -> ResolvedModel:
-    definitions = registry or get_default_registry()
+    definitions = registry if registry is not None else get_default_registry()
     for definition in definitions:
         if definition.id == model_id:
             model = definition.with_models_dir(models_dir)
