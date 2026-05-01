@@ -107,6 +107,25 @@ def test_spandrel_backend_processes_multiple_tiles(tmp_path):
     assert len(calls) > 1
 
 
+def test_spandrel_backend_reports_progress(tmp_path, tiny_png):
+    progress_events = []
+    backend = SpandrelBackend(load_model=lambda path: FakeModel())
+    request = UpscaleRequest(
+        input_path=tiny_png,
+        model=_model(tmp_path),
+        config=AppConfig(tile_size=32, tile_overlap=0),
+    )
+
+    result = backend.upscale(
+        request,
+        progress_callback=lambda step, value: progress_events.append((step, value)),
+    )
+
+    assert result.size == (16, 12)
+    assert progress_events
+    assert progress_events[-1][0] == "推理完成，准备返回结果"
+
+
 def test_spandrel_backend_maps_loader_import_error(tmp_path, tiny_png):
     backend = SpandrelBackend(
         load_model=lambda path: (_ for _ in ()).throw(ImportError("missing spandrel"))
@@ -117,5 +136,11 @@ def test_spandrel_backend_maps_loader_import_error(tmp_path, tiny_png):
         config=AppConfig(tile_size=32, tile_overlap=0),
     )
 
-    with pytest.raises(InferenceError, match="must be installed for the spandrel backend"):
+    with pytest.raises(
+        InferenceError, match="must be installed for the spandrel backend"
+    ) as exc_info:
         backend.upscale(request)
+
+    exc = exc_info.value
+    assert exc.code == "SPANDREL_DEPENDENCY_MISSING"
+    assert "Spandrel 推理依赖不可用" in exc.user_message_zh

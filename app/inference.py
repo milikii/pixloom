@@ -12,6 +12,7 @@ from PIL import Image, UnidentifiedImageError
 
 from app.config import AppConfig
 from app.model_registry import ResolvedModel
+from app.request_logging import build_request_id, log_event
 
 
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -19,7 +20,25 @@ SUPPORTED_SAVE_FORMATS = {"PNG", "JPG", "JPEG", "WEBP"}
 
 
 class InferenceError(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        code: str = "INFERENCE_ERROR",
+        user_message_zh: str | None = None,
+        likely_cause_zh: str | None = None,
+        suggested_action_zh: str | None = None,
+        detail: str | None = None,
+        request_id: str | None = None,
+    ) -> None:
+        resolved_message = user_message_zh or message or "处理失败。"
+        super().__init__(detail or message or resolved_message)
+        self.code = code
+        self.user_message_zh = resolved_message
+        self.likely_cause_zh = likely_cause_zh or "发生了未预期的处理问题。"
+        self.suggested_action_zh = suggested_action_zh or "请稍后重试；如果重复失败，请提供请求编号排查。"
+        self.detail = detail or message or resolved_message
+        self.request_id = request_id
 
 
 @dataclass(frozen=True)
@@ -45,24 +64,48 @@ class UpscaleResult:
     output_size: tuple[int, int]
     model_name: str
     elapsed_seconds: float
+    request_id: str = ""
 
 
 class UpscaleBackend(Protocol):
-    def upscale(self, request: UpscaleRequest) -> Image.Image: ...
+    def upscale(self, request: UpscaleRequest, progress_callback=None) -> Image.Image: ...
+
+
+def _run_backend(
+    backend: UpscaleBackend,
+    request: UpscaleRequest,
+    progress_callback=None,
+) -> Image.Image:
+    if progress_callback is None:
+        return backend.upscale(request)
+    try:
+        return backend.upscale(request, progress_callback=progress_callback)
+    except TypeError:
+        return backend.upscale(request)
 
 
 class BackendRunner:
     def __init__(self) -> None:
         self._spandrel_backend = None
 
-    def upscale(self, request: UpscaleRequest) -> Image.Image:
+    def upscale(self, request: UpscaleRequest, progress_callback=None) -> Image.Image:
         if request.model.backend == "spandrel":
             if self._spandrel_backend is None:
                 from app.spandrel_backend import SpandrelBackend
 
                 self._spandrel_backend = SpandrelBackend()
-            return self._spandrel_backend.upscale(request)
-        raise InferenceError(f"Backend {request.model.backend} is not implemented in v1.")
+            return _run_backend(
+                self._spandrel_backend,
+                request,
+                progress_callback=progress_callback,
+            )
+        raise InferenceError(
+            code="BACKEND_NOT_IMPLEMENTED",
+            user_message_zh="当前后端在 v1 里还没有实现。",
+            likely_cause_zh=f"模型 {request.model.display_name} 依赖的后端 {request.model.backend} 还未接入。",
+            suggested_action_zh="请改选当前已支持的模型，或等待后续版本补齐该后端。",
+            detail=f"Backend {request.model.backend} is not implemented in v1.",
+        )
 
 
 def _slug(value: str) -> str:
@@ -90,11 +133,21 @@ def _unique_path(path: Path) -> Path:
 def validate_upload(path: Path, config: AppConfig) -> UploadInfo:
     suffix = path.suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
-        raise InferenceError("Supported formats are PNG, JPG, JPEG, and WEBP.")
+        raise InferenceError(
+            code="UNSUPPORTED_FORMAT",
+            user_message_zh="暂不支持这种图片格式。",
+            likely_cause_zh="当前只支持 PNG、JPG、JPEG 和 WEBP。",
+            suggested_action_zh="请把图片转成 PNG、JPG、JPEG 或 WEBP 后再试。",
+            detail="Supported formats are PNG, JPG, JPEG, and WEBP.",
+        )
 
     if path.stat().st_size > config.max_upload_bytes:
         raise InferenceError(
-            f"Uploaded file exceeds the maximum upload size of {config.max_upload_bytes} bytes."
+            code="UPLOAD_TOO_LARGE",
+            user_message_zh="上传文件超过大小限制。",
+            likely_cause_zh=f"当前最大上传大小是 {config.max_upload_bytes} 字节。",
+            suggested_action_zh="请压缩图片后重试，或调高 PIXLOOM_MAX_UPLOAD_BYTES。",
+            detail=f"Uploaded file exceeds the maximum upload size of {config.max_upload_bytes} bytes.",
         )
 
     try:
@@ -103,12 +156,24 @@ def validate_upload(path: Path, config: AppConfig) -> UploadInfo:
             width, height = image.size
             image_format = image.format or suffix.lstrip(".").upper()
     except (UnidentifiedImageError, OSError) as exc:
-        raise InferenceError("The uploaded file could not be decoded as an image.") from exc
+        raise InferenceError(
+            code="IMAGE_DECODE_FAILED",
+            user_message_zh="图片文件无法被正确读取。",
+            likely_cause_zh="文件扩展名像图片，但实际内容损坏或不是有效图片。",
+            suggested_action_zh="请换一张可正常打开的图片后再试。",
+            detail="The uploaded file could not be decoded as an image.",
+        ) from exc
 
     if max(width, height) > config.max_input_side:
         raise InferenceError(
-            f"Input image {width}x{height} exceeds the maximum input side "
-            f"of {config.max_input_side}px."
+            code="INPUT_TOO_LARGE",
+            user_message_zh="输入图片尺寸超过当前限制。",
+            likely_cause_zh=f"图片尺寸为 {width}x{height}，超过最长边 {config.max_input_side}px。",
+            suggested_action_zh="请先缩小图片，或调高 PIXLOOM_MAX_INPUT_SIDE 后再试。",
+            detail=(
+                f"Input image {width}x{height} exceeds the maximum input side "
+                f"of {config.max_input_side}px."
+            ),
         )
 
     return UploadInfo(path=path, width=width, height=height, format=image_format)
@@ -126,7 +191,13 @@ def persist_upload(path: Path, config: AppConfig, original_name: str | None = No
 def normalize_output_format(output_format: str) -> str:
     normalized = output_format.upper()
     if normalized not in SUPPORTED_SAVE_FORMATS:
-        raise InferenceError("Output format must be PNG, JPG, JPEG, or WEBP.")
+        raise InferenceError(
+            code="OUTPUT_FORMAT_INVALID",
+            user_message_zh="输出格式无效。",
+            likely_cause_zh="当前只允许保存为 PNG、JPG、JPEG 或 WEBP。",
+            suggested_action_zh="请改选 PNG、JPG 或 WEBP 后再试。",
+            detail="Output format must be PNG, JPG, JPEG, or WEBP.",
+        )
     if normalized == "JPG":
         return "JPEG"
     return normalized
@@ -156,7 +227,9 @@ def _save_image(image: Image.Image, output_path: Path, output_format: str, quali
     image.save(output_path, format=save_format, **save_kwargs)
 
 
-def _unlink_if_exists(path: Path) -> None:
+def _unlink_if_exists(path: Path | None) -> None:
+    if path is None:
+        return
     try:
         path.unlink()
     except FileNotFoundError:
@@ -171,49 +244,154 @@ def run_upscale(
     output_format: str,
     quality: int,
     backend: UpscaleBackend | None = None,
+    request_id: str | None = None,
+    progress_callback=None,
+    pre_persisted_input: bool = False,
+    keep_input_on_failure: bool = False,
 ) -> UpscaleResult:
+    request_token = request_id or build_request_id()
     config.ensure_directories()
-    upload = validate_upload(image_path, config)
-    normalize_output_format(output_format)
-    expected_output_side = max(upload.width, upload.height) * model.scale
-    if expected_output_side > config.max_output_side:
-        raise InferenceError(
-            f"Output side {expected_output_side}px exceeds the maximum output side "
-            f"of {config.max_output_side}px."
-        )
+    upload: UploadInfo | None = None
+    stored_input: Path | None = None
+    output_path: Path | None = None
 
-    stored_input = persist_upload(image_path, config, original_name)
-    output_path = build_output_path(config, model, original_name, output_format)
+    log_event(
+        config,
+        request_id=request_token,
+        event="request_started",
+        status="started",
+        model_id=model.id,
+        input_filename=original_name,
+    )
+
     runner = backend or BackendRunner()
-    started = time.perf_counter()
-
     try:
-        output_image = runner.upscale(
-            UpscaleRequest(input_path=stored_input, model=model, config=config)
+        upload = validate_upload(image_path, config)
+        normalize_output_format(output_format)
+        expected_output_side = max(upload.width, upload.height) * model.scale
+        if expected_output_side > config.max_output_side:
+            raise InferenceError(
+                code="OUTPUT_TOO_LARGE",
+                user_message_zh="输出图片尺寸超过当前限制。",
+                likely_cause_zh=(
+                    f"按 {model.scale}x 放大后，最长边会达到 {expected_output_side}px，"
+                    f"超过当前限制 {config.max_output_side}px。"
+                ),
+                suggested_action_zh="请换一张更小的图，或调高 PIXLOOM_MAX_OUTPUT_SIDE 后再试。",
+                detail=(
+                    f"Output side {expected_output_side}px exceeds the maximum output side "
+                    f"of {config.max_output_side}px."
+                ),
+            )
+
+        stored_input = (
+            image_path
+            if pre_persisted_input
+            else persist_upload(image_path, config, original_name)
         )
-    except InferenceError:
-        _unlink_if_exists(stored_input)
+        output_path = build_output_path(config, model, original_name, output_format)
+        log_event(
+            config,
+            request_id=request_token,
+            event="inference_started",
+            status="running",
+            model_id=model.id,
+            input_filename=original_name,
+            input_path=stored_input,
+            input_dimensions=(upload.width, upload.height),
+            output_path=output_path,
+        )
+        started = time.perf_counter()
+        if progress_callback is not None:
+            progress_callback("准备开始推理", 0.15)
+        output_image = _run_backend(
+            runner,
+            UpscaleRequest(input_path=stored_input, model=model, config=config),
+            progress_callback=progress_callback,
+        )
+        try:
+            if progress_callback is not None:
+                progress_callback("正在写入输出文件", 0.92)
+            _save_image(output_image, output_path, output_format, quality)
+            output_size = output_image.size
+        except Exception as exc:
+            raise InferenceError(
+                code="OUTPUT_SAVE_FAILED",
+                user_message_zh="放大已完成，但保存结果文件失败。",
+                likely_cause_zh="输出目录不可写、磁盘空间不足，或输出格式保存失败。",
+                suggested_action_zh="请检查 `output/` 目录权限和磁盘空间后重试。",
+                detail=f"Failed to save output image: {exc}",
+                request_id=request_token,
+            ) from exc
+        finally:
+            output_image.close()
+        elapsed = time.perf_counter() - started
+    except InferenceError as exc:
+        exc.request_id = exc.request_id or request_token
+        _unlink_if_exists(output_path)
+        if not keep_input_on_failure:
+            _unlink_if_exists(stored_input)
+        log_event(
+            config,
+            request_id=request_token,
+            event="request_failed",
+            status="failure",
+            model_id=model.id,
+            input_filename=original_name,
+            input_path=stored_input,
+            input_dimensions=(upload.width, upload.height) if upload else None,
+            output_path=output_path,
+            error_code=exc.code,
+            error_detail=exc.detail,
+        )
         raise
     except Exception as exc:
-        _unlink_if_exists(stored_input)
-        raise InferenceError(f"Upscaling failed while running {model.display_name}.") from exc
-
-    try:
-        _save_image(output_image, output_path, output_format, quality)
-        output_size = output_image.size
-    except Exception:
         _unlink_if_exists(output_path)
-        _unlink_if_exists(stored_input)
-        raise
-    finally:
-        output_image.close()
+        if not keep_input_on_failure:
+            _unlink_if_exists(stored_input)
+        wrapped = InferenceError(
+            code="UPSCALE_FAILED",
+            user_message_zh="放大处理失败。",
+            likely_cause_zh="模型推理过程中发生了内部错误，或者当前模型文件不可用。",
+            suggested_action_zh="请确认模型文件完整，再重试；如果重复失败，请提供请求编号排查。",
+            detail=f"Upscaling failed while running {model.display_name}.",
+            request_id=request_token,
+        )
+        log_event(
+            config,
+            request_id=request_token,
+            event="request_failed",
+            status="failure",
+            model_id=model.id,
+            input_filename=original_name,
+            input_path=stored_input,
+            input_dimensions=(upload.width, upload.height) if upload else None,
+            output_path=output_path,
+            error_code=wrapped.code,
+            error_detail=f"{wrapped.detail} | {exc}",
+        )
+        raise wrapped from exc
 
-    elapsed = time.perf_counter() - started
+    log_event(
+        config,
+        request_id=request_token,
+        event="request_succeeded",
+        status="success",
+        model_id=model.id,
+        input_filename=original_name,
+        input_path=stored_input,
+        input_dimensions=(upload.width, upload.height),
+        output_path=output_path,
+        elapsed_seconds=elapsed,
+    )
+    if progress_callback is not None:
+        progress_callback("处理完成", 1.0)
     return UpscaleResult(
         input_path=stored_input,
         output_path=output_path,
         input_size=(upload.width, upload.height),
         output_size=output_size,
-        model_name=model.display_name,
+        model_name=model.display_name_zh or model.display_name,
         elapsed_seconds=elapsed,
+        request_id=request_token,
     )

@@ -11,6 +11,7 @@ class AppConfig:
     input_dir: Path = Path("input")
     output_dir: Path = Path("output")
     logs_dir: Path = Path("logs")
+    db_path: Path = Path("state/pixloom.sqlite3")
     max_input_side: int = 2048
     max_output_side: int = 8192
     max_upload_bytes: int = 25 * 1024 * 1024
@@ -19,12 +20,15 @@ class AppConfig:
     server_name: str = "0.0.0.0"
     server_port: int = 7860
     gradio_auth: tuple[str, str] | None = None
+    history_limit: int = 60
+    history_retention_days: int = 0
 
     def ensure_directories(self) -> None:
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.input_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _env_path(name: str, default: str) -> Path:
@@ -67,6 +71,7 @@ def load_config() -> AppConfig:
         input_dir=_env_path("PIXLOOM_INPUT_DIR", "input"),
         output_dir=_env_path("PIXLOOM_OUTPUT_DIR", "output"),
         logs_dir=_env_path("PIXLOOM_LOGS_DIR", "logs"),
+        db_path=_env_path("PIXLOOM_DB_PATH", "state/pixloom.sqlite3"),
         max_input_side=_env_int("PIXLOOM_MAX_INPUT_SIDE", 2048),
         max_output_side=_env_int("PIXLOOM_MAX_OUTPUT_SIDE", 8192),
         max_upload_bytes=_env_int("PIXLOOM_MAX_UPLOAD_BYTES", 25 * 1024 * 1024),
@@ -75,4 +80,8 @@ def load_config() -> AppConfig:
         server_name=os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"),
         server_port=_env_int("GRADIO_SERVER_PORT", 7860),
         gradio_auth=_load_gradio_auth(),
+        history_limit=_env_int("PIXLOOM_HISTORY_LIMIT", 60),
+        history_retention_days=_env_non_negative_int(
+            "PIXLOOM_HISTORY_RETENTION_DAYS", 0
+        ),
     )

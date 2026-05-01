@@ -12,10 +12,12 @@ input/*
 output/*
 logs/*
 models/*
+state/*
 !input/.gitkeep
 !output/.gitkeep
 !logs/.gitkeep
 !models/.gitkeep
+!state/.gitkeep
 
 # Local environment
 .env
@@ -25,3 +27,6 @@ models/*
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# Dev tooling
+compose.override.yml

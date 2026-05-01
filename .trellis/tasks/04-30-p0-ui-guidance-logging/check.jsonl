@@ -1,0 +1,4 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/commands/trellis/check.md", "reason": "Code quality check spec"}
+{"file": "tests/test_app_handler.py", "reason": "Current UI handler expectations that need updating for Chinese copy and structured errors."}
+{"file": "tests/test_inference_validation.py", "reason": "Current validation and failure-path coverage that needs request-id and logging assertions."}
