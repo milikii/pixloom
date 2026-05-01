@@ -20,12 +20,27 @@ runtime, memory behavior, and output quality are recorded here.
 
 ## Recommended Operator Set
 
+UI ordering should stay conservative for CPU-only NAS usage:
+
+1. natural photo default
+2. stable photo baseline
+3. sharp illustration / AI-art style
+4. anime / line-art baseline
+5. fast smoke test
+
+Each UI entry must expose style, speed class, local acceptance status, and one
+operator warning before submission.
+
 ### 1. Natural Photo Default
 
 **4x Remacri**
 Status: `manual-source`, planned P0 evaluation
 Expected file: `models/4x_foolhardy_Remacri.pth`
 Backend target: Spandrel / ESRGAN
+UI label: `照片自然 - 4x Remacri`
+Speed class: `普通偏慢`
+Style: `自然`
+Stability: `待本机验收`
 
 Use this when the source is a real photo and the current output feels too sharp. It
 should be the first candidate for portraits, family photos, travel photos, and mixed
@@ -40,6 +55,10 @@ hard edges, it may look less punchy.
 Status: `downloadable`, planned P0 evaluation
 Expected file: `models/RealESRGAN_x4plus.pth`
 Backend target: Spandrel / Real-ESRGAN
+UI label: `照片通用 - Real-ESRGAN 4x`
+Speed class: `普通`
+Style: `通用照片`
+Stability: `待本机验收`
 
 Use this as the official general-photo baseline. It is the safe reference point when
 comparing community ESRGAN models.
@@ -53,6 +72,10 @@ phone photos.
 Status: `manual-source`, planned P0 evaluation
 Expected file: `models/4x-UltraSharp.pth`
 Backend target: Spandrel / ESRGAN
+UI label: `锐化插画 - 4x UltraSharp`
+Speed class: `普通偏慢`
+Style: `锐利`
+Stability: `待本机验收`
 
 Use this for AI images, compressed web images, crisp illustrations, and pictures where
 you intentionally want stronger edge contrast.
@@ -66,6 +89,10 @@ and small textures look over-processed.
 Status: `installed`, previously smoke-tested
 Current file: `models/RealESRGAN_x4plus_anime_6B.pth`
 Backend target: Spandrel / Real-ESRGAN
+UI label: `动漫插画 - Real-ESRGAN Anime 6B`
+Speed class: `较快`
+Style: `动漫/线稿`
+Stability: `已实机跑通`
 
 Use this for anime, illustration, line art, and flat-color images. It is small and
 practical on CPU.
@@ -78,6 +105,10 @@ Tradeoff: real photos can look too hard or artificial.
 Status: `installed`, previously smoke-tested
 Current file: `models/realesr-general-x4v3.pth`
 Backend target: Spandrel / Real-ESRGAN
+UI label: `快速试跑 - Real-ESRGAN General v3`
+Speed class: `较快`
+Style: `快速通用`
+Stability: `已实机跑通`
 
 Use this to confirm the app, queue, and output path are working before running heavier
 models. It is useful for debugging and quick checks.
