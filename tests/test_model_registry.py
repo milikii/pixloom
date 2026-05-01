@@ -13,20 +13,25 @@ from app.model_registry import (
 def test_list_available_models_returns_enabled_models_with_existing_files(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
+    (models_dir / "4x_foolhardy_Remacri.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
     (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
     assert [model.id for model in available] == [
+        "4x-remacri",
         "realesrgan-x4plus",
         "4x-ultrasharp",
     ]
-    assert available[0].display_name == "Real-ESRGAN 4x Photo"
-    assert available[0].display_name_zh == "Real-ESRGAN 4x 照片"
+    assert available[0].display_name == "4x Remacri"
+    assert available[0].display_name_zh == "照片自然 - 4x Remacri"
     assert available[0].backend == "spandrel"
     assert available[0].scale == 4
     assert "照片" in available[0].recommended_for_zh
+    assert available[0].style_zh == "自然"
+    assert available[0].speed_zh == "普通偏慢"
+    assert available[0].stability_zh == "待本机验收"
 
 
 def test_list_available_models_hides_missing_and_disabled_models(tmp_path):
@@ -53,6 +58,8 @@ def test_resolve_model_returns_existing_model(tmp_path):
     assert model.display_name == "Real-ESRGAN 4x Anime"
     assert model.absolute_path == models_dir / "RealESRGAN_x4plus_anime_6B.pth"
     assert "动漫" in model.recommended_for_zh
+    assert model.speed_zh == "较快"
+    assert model.stability_zh == "已实机跑通"
 
 
 def test_resolve_model_rejects_unknown_model_id(tmp_path):

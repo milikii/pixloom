@@ -81,6 +81,9 @@ def format_model_guidance(model_id: str | None, models: Sequence[ResolvedModel])
         f"### 模型说明\n"
         f"**{selected.display_name_zh or selected.display_name}**\n\n"
         f"- 适合：{selected.recommended_for_zh or '请参考模型名称选择。'}\n"
+        f"- 风格：{selected.style_zh or '未标注'}\n"
+        f"- 速度：{selected.speed_zh or '未标注'}\n"
+        f"- 状态：{selected.stability_zh or '未标注'}\n"
         f"- 提醒：{selected.warning_zh or '当前没有额外提醒。'}"
     )
 

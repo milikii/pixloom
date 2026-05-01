@@ -94,6 +94,21 @@ models/4x_foolhardy_Remacri.pth
 
 Only enabled models with existing files appear in the WebUI.
 
+Recommended operator choices:
+
+- `照片自然 - 4x Remacri`: default candidate for real photos and portraits after
+  the model file is locally accepted.
+- `照片通用 - Real-ESRGAN 4x`: stable official photo baseline.
+- `锐化插画 - 4x UltraSharp`: sharp style for AI images, compressed web images,
+  and crisp illustrations.
+- `动漫插画 - Real-ESRGAN Anime 6B`: anime, illustration, line art, and flat-color
+  images.
+- `快速试跑 - Real-ESRGAN General v3`: quick smoke tests for upload, queue, and
+  output path behavior.
+
+The model guidance panel shows best fit, style, CPU speed class, local acceptance
+status, and a warning before the operator submits a task.
+
 ## Start
 
 ```bash

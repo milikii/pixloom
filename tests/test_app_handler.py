@@ -291,4 +291,7 @@ def test_format_model_guidance_returns_chinese_text(tmp_path):
 
     assert "模型说明" in guidance
     assert "适合测试、通用小图和功能验证" in guidance
+    assert "速度：未标注" in guidance
+    assert "风格：未标注" in guidance
+    assert "状态：未标注" in guidance
     assert "测试环境专用模型" in guidance
