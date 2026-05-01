@@ -1,0 +1,69 @@
+{
+  "id": "p0-ui-guidance-logging",
+  "name": "p0-ui-guidance-logging",
+  "title": "P0 UI copy, model guidance, error UX, and logging",
+  "description": "",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "root",
+  "assignee": "root",
+  "createdAt": "2026-04-30",
+  "completedAt": "2026-05-01",
+  "branch": "pixloom-v1-implementation",
+  "base_branch": "pixloom-v1-implementation",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "app/app.py",
+    "app/config.py",
+    "app/history.py",
+    "app/inference.py",
+    "app/model_registry.py",
+    "app/request_logging.py",
+    "app/tasks.py",
+    "tests/test_app_handler.py",
+    "tests/test_history.py",
+    "tests/test_tasks.py",
+    "README.md",
+    "docs/ARCHITECTURE.md",
+    "docs/PROGRESS.md",
+    ".trellis/spec/backend/",
+    ".trellis/spec/frontend/"
+  ],
+  "notes": "Implemented and verified on pixloom-v1-implementation. Delivered Chinese-first Gradio copy, model suitability guidance, request-id-linked structured errors, JSONL audit logging, SQLite-backed task visibility, safe task deletion, thumbnail history, retention cleanup, and matching spec/docs updates. Verified with .venv/bin/pytest -q (60 passed) and aligned with README/docs.",
+  "meta": {}
+}

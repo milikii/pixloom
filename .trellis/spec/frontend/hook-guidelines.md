@@ -13,8 +13,11 @@ Examples:
 
 - `on_submit`
 - `on_model_change`
+- `on_task_refresh`
+- `on_task_select`
+- `on_task_delete`
 
-Both live in `app/app.py`.
+All current callbacks live in `app/app.py`.
 
 ---
 
@@ -35,6 +38,19 @@ Gradio input values -> Python callback -> backend function -> Gradio outputs
 
 Do not add polling, browser-side fetch wrappers, or custom JS hooks unless a task
 explicitly needs them.
+
+## Current Examples
+
+- `app/app.py`: `on_submit` delegates request handling to `handle_batch_upscale`
+  and then refreshes task gallery, state, choices, and summary from backend
+  storage.
+- `app/app.py`: `on_model_change` is a pure callback that returns
+  `format_model_guidance(model_id, models)`.
+- `app/app.py`: `on_task_select`, `on_task_refresh`, and `on_task_delete` re-read
+  task data through `get_task`, `list_tasks`, and `delete_task` instead of trusting
+  stale browser state.
+- `tests/test_app_handler.py`: exercises the callback-facing helpers through
+  `handle_upscale`, `handle_batch_upscale`, and `format_model_guidance`.
 
 ---
 

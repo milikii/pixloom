@@ -67,6 +67,18 @@ Relevant files:
 - `app/inference.py`
 - `app/app.py`
 
+Current examples:
+
+- `app/inference.py`: `_validate_image_file`, `_validate_output_size`,
+  `_ensure_backend_supported`, and `run_upscale` raise or wrap `InferenceError`
+  with stable codes and Chinese next steps.
+- `app/app.py`: `format_error_message`, `_ui_error`, `handle_upscale`, and
+  `handle_batch_upscale` render failures with request ids instead of raw
+  exception strings.
+- `tests/test_inference_validation.py` and `tests/test_app_handler.py`: cover
+  validation failures, backend failures, missing-model UI rejection, and request
+  id propagation.
+
 ---
 
 ## Forbidden Patterns
