@@ -1,0 +1,6 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/commands/trellis/check.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify SQLite/filesystem ownership and safe deletion behavior"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Verify request/task event logging contracts"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify task list UX, Chinese copy, and failure visibility"}
+{"file": "tests/test_history.py", "reason": "Existing history deletion/listing tests to evolve into task-list tests"}

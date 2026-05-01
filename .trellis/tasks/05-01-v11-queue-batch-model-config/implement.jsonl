@@ -1,0 +1,11 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": "docs/superpowers/plans/2026-05-01-pixloom-queue-batch-models.md", "reason": "Detailed V1.1 queue, batch, and model configuration plan"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Filesystem storage rules and future SQLite persistence constraints"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Request lifecycle JSONL events must remain correlated with task state"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Task list state and selected task flow stay in Gradio callback state"}
+{"file": "app/history.py", "reason": "Current filesystem-backed history implementation to evolve or wrap"}
+{"file": "app/request_logging.py", "reason": "Current request id and JSONL audit log helpers"}
+{"file": "app/app.py", "reason": "Current Gradio UI callback and history wiring"}
+{"file": "app/inference.py", "reason": "Current single-image validation, persistence, inference, and error contract"}

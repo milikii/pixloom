@@ -2,15 +2,25 @@
 
 Pixloom is a self-hosted NAS image upscaling WebUI. It runs as a small Docker Compose service with a Gradio interface and CPU-only inference.
 
-The first release is intentionally narrow:
+The current release is intentionally narrow:
 
-- upload one image
+- upload one image or a small batch
 - choose an installed model
-- run CPU upscaling
+- run CPU upscaling sequentially
 - preview the output
 - download the result
 
 Pixloom is not a ComfyUI replacement and does not expose a workflow graph.
+
+Current operator-facing behavior:
+
+- the main WebUI copy is Chinese-first
+- the model selector shows suitability guidance before inference starts
+- every upscale run gets a request id
+- single-image and batch runs are recorded in a SQLite task queue
+- the task list shows queued, running, completed, failed, deleted, and interrupted work
+- failures show operator guidance instead of a raw traceback
+- request events are appended as JSONL under `logs/`
 
 ## Directory Layout
 
@@ -22,13 +32,17 @@ Pixloom is not a ComfyUI replacement and does not expose a workflow graph.
 │   ├── requirements.txt
 │   ├── app.py
 │   ├── config.py
+│   ├── history.py
 │   ├── inference.py
 │   ├── model_registry.py
+│   ├── request_logging.py
+│   ├── tasks.py
 │   └── spandrel_backend.py
 ├── models/
 ├── input/
 ├── output/
-└── logs/
+├── logs/
+└── state/
 ```
 
 Runtime data is persisted in:
@@ -36,7 +50,35 @@ Runtime data is persisted in:
 - `models/`: model files placed manually
 - `input/`: uploaded source images
 - `output/`: generated upscaled images
-- `logs/`: reserved for runtime logs
+- `logs/`: JSONL request audit trail
+- `state/`: SQLite task queue database
+
+## Task Queue State
+
+Pixloom records each submitted image as a task in SQLite. The default database path
+is `state/pixloom.sqlite3`; Compose mounts it as `/data/state/pixloom.sqlite3`.
+
+Current task statuses are:
+
+```text
+queued
+running
+completed
+failed
+deleted
+interrupted
+```
+
+`request_id` remains the per-image trace id used in the WebUI and JSONL logs.
+`batch_id` groups related uploads. A single-image submission creates a one-item
+batch; a multi-image submission creates one batch with one task per image.
+
+On app startup, any task left as `running` is marked `interrupted` so a restart does
+not leave invisible in-progress work.
+
+Deleting a task removes only linked files that are safely under the configured
+`input/` and `output/` directories, marks the SQLite row as `deleted`, and appends
+a `task_deleted` audit event. Running tasks cannot be deleted.
 
 ## Model Files
 
@@ -58,20 +100,20 @@ Only enabled models with existing files appear in the WebUI.
 docker compose up -d --build
 ```
 
-Open the app through the host reverse proxy, or locally on the NAS:
+Open the app from another device on the same LAN, or locally on the NAS:
 
 ```text
-http://127.0.0.1:7860
+http://192.168.2.220:7860
 ```
 
-The default Compose file binds the port to loopback only:
+The default Compose file publishes the port on the NAS host:
 
 ```yaml
 ports:
-  - "127.0.0.1:7860:7860"
+  - "7860:7860"
 ```
 
-Do not expose this port directly to the public internet.
+This is suitable for trusted LAN access. Do not expose this port directly to the public internet.
 
 ## Stop
 
@@ -92,6 +134,31 @@ docker compose up -d
 docker compose logs -f --tail=120 upscale-webui
 ```
 
+Request-level audit logs are written under `logs/` as JSONL files. When a run fails,
+the WebUI shows a request id that can be matched against those files.
+
+## Task List And File Retention
+
+Successful runs are kept on disk:
+
+- uploaded source images are saved under `input/`
+- upscaled results are saved under `output/`
+- request logs are appended under `logs/`
+
+The WebUI task list shows recent task rows from SQLite. Completed tasks also appear
+as thumbnails when their output file still exists. Selecting a task restores its
+details, output preview/download when available, and request log excerpt. Deleting
+a task removes the linked input and output files from local storage when those paths
+are safe runtime paths. Logs remain append-only for audit and request-id lookup.
+
+Failed runs clean up output files created by that failed request when possible.
+Queue-backed failures keep the persisted input path in the task row so the failed
+task can still be inspected by request id.
+
+Automatic cleanup is disabled by default. To prune old successful history items, set
+`PIXLOOM_HISTORY_RETENTION_DAYS` to a positive number. Cleanup runs when the app
+starts and when the task list is refreshed.
+
 ## Runtime Limits
 
 The service defaults to:
@@ -100,15 +167,21 @@ The service defaults to:
 - max output side: `8192px`
 - tile size: `256`
 - tile overlap: `16`
+- history items shown: `60`
+- history retention: `0 days` means disabled
+- SQLite DB path: `state/pixloom.sqlite3`
 
 Override these with environment variables in `compose.yml`:
 
 ```yaml
 environment:
+  PIXLOOM_DB_PATH: "state/pixloom.sqlite3"
   PIXLOOM_MAX_INPUT_SIDE: "2048"
   PIXLOOM_MAX_OUTPUT_SIDE: "8192"
   PIXLOOM_TILE_SIZE: "256"
   PIXLOOM_TILE_OVERLAP: "16"
+  PIXLOOM_HISTORY_LIMIT: "60"
+  PIXLOOM_HISTORY_RETENTION_DAYS: "0"
 ```
 
 ## Optional Gradio Auth
@@ -121,7 +194,7 @@ environment:
   GRADIO_AUTH_PASS: "your-password"
 ```
 
-This is only a fallback for local or LAN-only use. Public access should be protected at nginx or a unified authentication layer.
+This is only a fallback for local or LAN-only use. Public access should still be protected at nginx or a unified authentication layer.
 
 ## nginx Reverse Proxy Example
 
@@ -154,10 +227,11 @@ Add Basic Auth, Authelia, OAuth2 Proxy, or the existing NAS login layer in nginx
 ## Tests
 
 ```bash
-pytest -v
+docker run --rm -v "$PWD:/workspace" -w /workspace pixloom-upscale-webui python -m pytest -q
 ```
 
-The test suite uses fake models and generated tiny images. It does not require real model downloads.
+The test suite uses fake models and generated tiny images. It does not require real
+model downloads.
 
 ## Manual Acceptance Test
 

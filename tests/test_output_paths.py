@@ -21,6 +21,9 @@ def _model() -> ResolvedModel:
         absolute_path=Path("models/RealESRGAN_x4plus.pth"),
         image_types=("photo",),
         notes="test",
+        display_name_zh="Real-ESRGAN 4x 照片",
+        recommended_for_zh="适合照片。",
+        warning_zh="测试提示。",
     )
 
 

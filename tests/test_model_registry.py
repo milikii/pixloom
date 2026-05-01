@@ -23,8 +23,10 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
         "4x-ultrasharp",
     ]
     assert available[0].display_name == "Real-ESRGAN 4x Photo"
+    assert available[0].display_name_zh == "Real-ESRGAN 4x 照片"
     assert available[0].backend == "spandrel"
     assert available[0].scale == 4
+    assert "照片" in available[0].recommended_for_zh
 
 
 def test_list_available_models_hides_missing_and_disabled_models(tmp_path):
@@ -50,6 +52,7 @@ def test_resolve_model_returns_existing_model(tmp_path):
 
     assert model.display_name == "Real-ESRGAN 4x Anime"
     assert model.absolute_path == models_dir / "RealESRGAN_x4plus_anime_6B.pth"
+    assert "动漫" in model.recommended_for_zh
 
 
 def test_resolve_model_rejects_unknown_model_id(tmp_path):
