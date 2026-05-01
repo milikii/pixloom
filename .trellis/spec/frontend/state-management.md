@@ -46,6 +46,20 @@ queue status must be re-read from backend storage.
 - Store only the selected request id in UI state for deletion; re-read the SQLite
   task row and re-resolve file paths on the backend before deleting.
 
+## Current Examples
+
+- `app/app.py`: `build_demo()` loads `runtime_config`, initializes task storage,
+  marks interrupted work, and builds initial task/gallery state from
+  `list_tasks(...)`.
+- `app/app.py`: `task_values()` is the single refresh point for gallery entries,
+  serialized state, task list text, dropdown choices, and summary text after
+  submit, refresh, or delete.
+- `app/tasks.py`: `TaskRecord` rows are the durable source for task status,
+  output paths, elapsed time, and error fields.
+- `tests/test_tasks.py` and `tests/test_app_handler.py`: prove task state is
+  stored in SQLite, refreshed through backend helpers, and visible after success
+  or failure.
+
 ---
 
 ## Common Mistakes

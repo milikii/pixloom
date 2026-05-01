@@ -38,6 +38,20 @@
 
 ---
 
+## Current Examples
+
+- `app/app.py`: `format_status`, `format_error_message`, and
+  `format_model_guidance` keep critical operator copy Chinese-first and include
+  request ids when a run succeeds or fails.
+- `app/app.py`: `_task_list_text`, `_task_detail`, `_task_gallery`, and
+  `_task_summary` expose completed, failed, interrupted, deleted, queued, and
+  running task states without hiding failures behind thumbnails.
+- `tests/test_app_handler.py`: covers Chinese status formatting, failure
+  formatting, unavailable model handling, model guidance, batch task behavior, and
+  SQLite task visibility from the UI handler boundary.
+
+---
+
 ## Review Checklist
 
 - Can a first-time operator understand which model to choose?
