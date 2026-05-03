@@ -40,19 +40,41 @@ class BackgroundTaskWorker:
             self._thread.join(timeout=timeout)
 
     def _run(self) -> None:
-        registry = get_default_registry()
+        import sys
+        try:
+            registry = get_default_registry()
+        except Exception as exc:
+            print(f"[pixloom-worker] FATAL: get_default_registry failed: {exc}", file=sys.stderr)
+            return
         runner = BackendRunner()
+        print("[pixloom-worker] started", file=sys.stderr)
 
         while not self._stop_event.is_set():
-            task = claim_next_queued_task(self._config)
+            try:
+                task = claim_next_queued_task(self._config)
+            except Exception as exc:
+                print(f"[pixloom-worker] claim error: {exc}", file=sys.stderr)
+                self._stop_event.wait(timeout=2.0)
+                continue
+
             if task is None:
                 self._stop_event.wait(timeout=2.0)
                 continue
 
+            print(f"[pixloom-worker] processing {task.request_id[:20]} model={task.model_id}", file=sys.stderr)
             try:
                 self._process_task(task, registry, runner)
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[pixloom-worker] task failed: {exc}", file=sys.stderr)
+                try:
+                    mark_task_failed(
+                        self._config,
+                        task.request_id,
+                        error_code="WORKER_CRASH",
+                        error_detail=str(exc),
+                    )
+                except Exception:
+                    pass
 
     def _process_task(self, task, registry, runner) -> None:
         def on_progress(step: str, value: float) -> None:
