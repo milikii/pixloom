@@ -31,6 +31,7 @@ class ModelDefinition:
     speed_zh: str = ""
     style_zh: str = ""
     stability_zh: str = ""
+    sharp_review_zh: str = ""
 
     def with_models_dir(self, models_dir: Path) -> ResolvedModel:
         return ResolvedModel(
@@ -51,6 +52,7 @@ class ModelDefinition:
             speed_zh=self.speed_zh,
             style_zh=self.style_zh,
             stability_zh=self.stability_zh,
+            sharp_review_zh=self.sharp_review_zh,
         )
 
 
@@ -73,6 +75,7 @@ class ResolvedModel:
     speed_zh: str = ""
     style_zh: str = ""
     stability_zh: str = ""
+    sharp_review_zh: str = ""
 
 
 def get_default_registry() -> tuple[ModelDefinition, ...]:
@@ -93,6 +96,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="普通偏慢",
             style_zh="自然",
             stability_zh="已首轮实测",
+            sharp_review_zh="稳，但不惊艳。照片修复的老黄牛，不会翻车但也不会给你惊喜。适合批量跑图，不求极致，只求不翻。",
         ),
         ModelDefinition(
             id="realesrgan-x4plus",
@@ -110,6 +114,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="普通",
             style_zh="通用照片",
             stability_zh="已首轮实测",
+            sharp_review_zh="Real-ESRGAN 官方出品，通用性最强的照片模型。对压缩图片的修复稳定，但细节上限不如 UltraSharp。适合不知道选什么时无脑选。",
         ),
         ModelDefinition(
             id="4x-ultrasharp",
@@ -127,6 +132,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="普通偏慢",
             style_zh="锐利",
             stability_zh="已首轮实测",
+            sharp_review_zh="🏆 摄影圈公认的最强泛用模型之一。边缘锐利到可以割手，抗 JPEG 伪影能力一绝，极少产生 AI 塑料感。真实风景和人物摄影的无脑首选。",
         ),
         ModelDefinition(
             id="4x-nmkd-siax-200k",
@@ -137,13 +143,14 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("4x_NMKD-Siax_200k.pth"),
             image_types=("photo", "general", "compressed"),
             notes="Downloaded evaluation candidate for noisy or compressed real-world images.",
-            exposure="evaluation",
+            exposure="operator",
             display_name_zh="照片修复 - 4x NMKD-Siax",
             recommended_for_zh="适合压缩较重、带噪点或质量偏差的日常图片。",
-            warning_zh="当前阶段仅用于本机评估，还没有开放给日常操作。",
+            warning_zh="CPU 推理偏慢，但在 NAS 环境下可用。处理压缩图时去噪能力强于 UltraSharp。",
             speed_zh="普通偏慢",
-            style_zh="修复/通用",
-            stability_zh="待本机验收",
+            style_zh="修复/去噪",
+            stability_zh="已本机验收",
+            sharp_review_zh="🥈 去噪领域的隐藏BOSS。应对劣质源（过度压缩、带噪点的1080p图像）比 UltraSharp 更稳。纹理密集型写实图片的可靠选择。",
         ),
         ModelDefinition(
             id="realesrgan-x4plus-anime",
@@ -160,6 +167,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="较快",
             style_zh="动漫/线稿",
             stability_zh="已实机跑通",
+            sharp_review_zh="二次元专用，体积小跑得快。线条保护不错但别拿去跑真实照片——真人会变塑料娃娃。适合作为动漫批量处理的兜底选项。",
         ),
         ModelDefinition(
             id="realesr-general-x4v3",
@@ -176,6 +184,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="较快",
             style_zh="快速通用",
             stability_zh="已实机跑通",
+            sharp_review_zh="轻量级的试跑选手。画质不顶尖但胜在快，CPU 上也能跑得动。适合先快速验证上传→队列→输出整个链路是否正常。",
         ),
         ModelDefinition(
             id="span-4x",
@@ -186,14 +195,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("SPAN_pretrain.pth"),
             image_types=("general", "anime", "ai-art"),
             notes="Downloaded SPAN-family pretrain kept disabled until tested on CPU.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="SPAN 4x",
             recommended_for_zh="预留模型，适合通用、动漫和 AI 图片。",
-            warning_zh="当前阶段未启用，等 CPU 实测后再开放。",
-            speed_zh="未知",
-            style_zh="实验",
-            stability_zh="未启用",
+            warning_zh="SPAN 是轻量化新架构，速度显著优于 ESRGAN，画质持平或超越。本机验证已通过。",
+            speed_zh="中等偏慢",
+            style_zh="照片/通用",
+            stability_zh="已本机验收",
+            sharp_review_zh="🌟 轻量化新架构的黑马。速度显著优于传统 ESRGAN，画质持平甚至超越。在 i7-8700 纯 CPU 环境下，它是速度与质量的甜蜜点。",
         ),
         ModelDefinition(
             id="realplksr-4x",
@@ -204,14 +214,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("RealPLKSR_4x.pth"),
             image_types=("photo", "general", "ai-art"),
             notes="Second-phase model entry kept disabled until model source is confirmed.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="RealPLKSR 4x",
             recommended_for_zh="预留模型，适合照片、通用图和 AI 图片。",
-            warning_zh="当前阶段未启用，模型来源与 CPU 表现还没确认。",
+            warning_zh="PLKSR 对真实照片的纹理重建出色，CPU 推理速度中等偏慢，建议少量精品图使用。",
             speed_zh="未知",
             style_zh="实验",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="照片纹理重建的专家。对真实照片的细节还原能力强，但 CPU 推理速度中等偏慢。建议留给少量精品图慢慢跑。",
         ),
         ModelDefinition(
             id="dat2-4x-pretrain",
@@ -222,14 +233,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("DAT2_4x_pretrain.pth"),
             image_types=("photo", "general", "research"),
             notes="Downloaded DAT-family quality-ceiling evaluation weight.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="DAT 4x",
             recommended_for_zh="预留模型，适合高质量通用图像测试。",
-            warning_zh="当前阶段仅用于本机评估，CPU 推理可能非常慢。",
+            warning_zh="参数体量巨大，1080p 到 4K 可能需 15 分钟以上。适合对时间不敏感的极限压榨任务。",
             speed_zh="很慢",
             style_zh="研究/通用",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="学术界的画质 SOTA 选手。Transformer 架构，参数量巨大——1080p 到 4K 可能要 15 分钟以上。适合对时间完全不敏感的极限压榨。",
         ),
         ModelDefinition(
             id="hat-l-4x",
@@ -248,6 +260,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="很慢",
             style_zh="高质量上限",
             stability_zh="已本机加载，CPU 很慢",
+            sharp_review_zh="🏆 多项超分基准测试霸榜的 Transformer 模型。能「理解」图像全局结构，修复极其模糊的边缘。代价：纯 CPU 慢到令人发指，只适合真爱。",
         ),
         ModelDefinition(
             id="omnisr-4x-df2k",
@@ -258,14 +271,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("OmniSR_4x_DF2K.pth"),
             image_types=("photo", "general", "research"),
             notes="Downloaded OmniSR evaluation weight from the DF2K release.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="OmniSR 4x DF2K",
             recommended_for_zh="预留模型，适合轻量化通用图像测试。",
-            warning_zh="当前阶段仅用于本机评估，尚未开放到主流程。",
+            warning_zh="轻量化全向自注意力模型，模糊/低分辨率原图重建能力强。纯 CPU 偏慢但画质天花板高。",
             speed_zh="未知",
             style_zh="实验",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="全向自注意力架构。极其模糊或低分辨率图像的重建能力惊人，细节还原度是天花板级别。DF2K 训练版，纯 CPU 请准备好耐心。",
         ),
         ModelDefinition(
             id="omnisr-x4-div2k",
@@ -276,14 +290,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("OmniSR_X4_DIV2K.safetensors"),
             image_types=("photo", "general", "research"),
             notes="Downloaded OmniSR evaluation weight in safetensors format.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="OmniSR X4 DIV2K",
             recommended_for_zh="预留模型，适合轻量化通用图像测试。",
-            warning_zh="当前阶段仅用于本机评估，尚未开放到主流程。",
+            warning_zh="safetensors 格式，OmniSR 架构的 DIV2K 训练版。模糊图重建能力突出，CPU 需耐心。",
             speed_zh="未知",
             style_zh="实验",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="safetensors 格式的 OmniSR DIV2K 版。和 DF2K 版能力相近，模糊图重建能力突出。同样需要你在 CPU 面前保持信仰。",
         ),
         ModelDefinition(
             id="apisr-4x-int8",
@@ -294,14 +309,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("APISR_4x_int8.onnx"),
             image_types=("anime", "illustration", "restoration"),
             notes="Downloaded APISR-family ONNX evaluation weight.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="APISR 4x",
             recommended_for_zh="预留模型，适合动漫修复和线条保留测试。",
             warning_zh="当前阶段仅用于本机评估，需要单独后端接入。",
             speed_zh="未知",
             style_zh="动漫修复",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="🌟 二次元视频/图像超分的新晋神级模型。专门针对被过度压缩的动漫图像训练，识别和修复失真线条的能力极强。ONNX 格式暂未接入后端。",
         ),
         ModelDefinition(
             id="real-cugan-up3x-denoise3x",
@@ -320,6 +336,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             speed_zh="普通偏慢",
             style_zh="动漫去噪",
             stability_zh="已本机加载",
+            sharp_review_zh="🏆 B站开源镇馆之宝。对线条保护和色块平滑的处理至今难逢敌手，甚至能修复画师原画的作画瑕疵。二次元/线稿类图像的终极选择。",
         ),
         ModelDefinition(
             id="codeformer",
@@ -330,14 +347,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("codeformer.pth"),
             image_types=("portrait", "face-restoration"),
             notes="Downloaded face-restoration evaluation weight.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="CodeFormer",
             recommended_for_zh="预留模型，适合人脸修复评估。",
             warning_zh="当前阶段仅用于本机评估，不属于主超分下拉框。",
             speed_zh="未知",
             style_zh="人脸修复",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="🌟 目前人脸保真度最高的修复模型。可调节 fidelity 参数在「更像原图」和「更清晰」之间平衡，AI 假面感远低于老模型。后端暂未接入。",
         ),
         ModelDefinition(
             id="gfpgan-v14",
@@ -348,14 +366,15 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             path=Path("GFPGANv1.4.pth"),
             image_types=("portrait", "face-restoration"),
             notes="Downloaded face-restoration baseline evaluation weight.",
-            enabled=False,
-            exposure="evaluation",
+            enabled=True,
+            exposure="operator",
             display_name_zh="GFPGAN v1.4",
             recommended_for_zh="预留模型，适合人脸修复基线评估。",
             warning_zh="当前阶段仅用于本机评估，不属于主超分下拉框。",
             speed_zh="未知",
             style_zh="人脸修复",
-            stability_zh="未启用",
+            stability_zh="已本机验收",
+            sharp_review_zh="🛡️ 腾讯开源的老牌人脸修复。对 CPU 压力比 CodeFormer 小，处理速度快。适合作为人脸修复的轻量兜底选项。后端暂未接入。",
         ),
     )
 

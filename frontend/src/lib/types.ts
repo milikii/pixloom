@@ -11,6 +11,7 @@ export interface ResolvedModel {
   speed_zh: string;
   stability_zh: string;
   warning_zh: string;
+  sharp_review_zh: string;
   notes: string;
 }
 

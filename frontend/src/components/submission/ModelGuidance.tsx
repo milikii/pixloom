@@ -103,6 +103,14 @@ export function ModelGuidance({
               {model.warning_zh || "当前没有额外提醒。"}
             </span>
           </li>
+          {model.sharp_review_zh && (
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0 text-xs text-warning">锐评</span>
+              <span className="text-foreground leading-relaxed">
+                {model.sharp_review_zh}
+              </span>
+            </li>
+          )}
         </ul>
         {hiddenCount > 0 && (
           <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
