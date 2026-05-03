@@ -87,7 +87,7 @@ export default function HomePage() {
     models.find((m) => m.id === modelId) ?? null;
 
   return (
-    <div className="mx-auto max-w-[1380px] px-4 pb-10 pt-5">
+    <div className="mx-auto max-w-[1380px] px-3 pb-8 pt-4 sm:px-4 sm:pb-10 sm:pt-5">
       <ShellHeader
         operatorCount={models.length}
         installedCount={installedCount}
@@ -95,9 +95,9 @@ export default function HomePage() {
         rightSlot={<ThemeToggle variant="header" />}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[5fr_6fr]">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[5fr_6fr]">
         {/* LEFT: Submission */}
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm sm:rounded-2xl sm:p-5">
           <PanelHead
             eyebrow={zh.panels.input.eyebrow}
             title={zh.panels.input.title}
@@ -153,7 +153,7 @@ export default function HomePage() {
         </div>
 
         {/* RIGHT: Results */}
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm sm:rounded-2xl sm:p-5">
           <ResultsTabs
             tabs={[
               {
