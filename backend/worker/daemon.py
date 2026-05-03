@@ -40,18 +40,17 @@ class BackgroundTaskWorker:
             self._thread.join(timeout=timeout)
 
     def _run(self) -> None:
-        import traceback as tb
-        _logf = open("/tmp/worker.log", "a")
+        import sys
         def _log(msg):
-            _logf.write(f"[pixloom-worker] {msg}\n")
-            _logf.flush()
+            print(f"[pixloom-worker] {msg}", file=sys.stderr, flush=True)
         _log("thread started")
         try:
             registry = get_default_registry()
             _log(f"registry loaded ({len(registry)} models)")
         except Exception as exc:
             _log(f"FATAL registry: {exc}")
-            tb.print_exc(file=_logf)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             return
         runner = BackendRunner()
         _log("backend runner ready, entering loop")
@@ -125,14 +124,13 @@ class BackgroundTaskWorker:
                 keep_input_on_failure=True,
             )
         except Exception as exc:
-            import traceback
+            import sys, traceback
             code = getattr(exc, "code", "INFERENCE_FAILED")
             detail = f"{exc.__class__.__name__}: {exc}"
             if exc.__cause__:
                 detail += f" | caused by: {exc.__cause__.__class__.__name__}: {exc.__cause__}"
-            with open("/tmp/worker.log", "a") as f:
-                f.write(f"[pixloom-worker] inference FAILED: {detail}\n")
-                traceback.print_exc(file=f)
+            print(f"[pixloom-worker] FAILED: {detail}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
             mark_task_failed(
                 self._config,
                 task.request_id,

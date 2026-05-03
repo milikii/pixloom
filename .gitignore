@@ -28,6 +28,15 @@ state/*
 .DS_Store
 Thumbs.db
 
+# Node (root — frontend deps live in frontend/)
+node_modules/
+package-lock.json
+
+# Frontend runtime data
+frontend/logs/
+frontend/state/
+
 # Dev tooling
 compose.override.yml
 .gstack/
+*.codex.*
