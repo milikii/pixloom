@@ -11,11 +11,13 @@ const STATUS_OPTIONS: { key: TaskStatus | "all"; label: string }[] = [
   { key: "interrupted", label: "已中断" },
 ];
 
-const TIME_OPTIONS: { key: string; label: string; days: number | null }[] = [
-  { key: "today", label: "今天", days: 0 },
-  { key: "3days", label: "最近 3 天", days: 3 },
-  { key: "7days", label: "最近 7 天", days: 7 },
-  { key: "all", label: "全部", days: null },
+const TIME_OPTIONS: { key: string; label: string; getCutoff: () => Date | null }[] = [
+  { key: "today", label: "今天", getCutoff: () => { const d = new Date(); d.setHours(0,0,0,0); return d; } },
+  { key: "yesterday", label: "昨天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-1); d.setHours(0,0,0,0); return d; } },
+  { key: "3days", label: "最近 3 天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-3); d.setHours(0,0,0,0); return d; } },
+  { key: "7days", label: "最近 7 天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-7); d.setHours(0,0,0,0); return d; } },
+  { key: "thisMonth", label: "本月", getCutoff: () => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; } },
+  { key: "all", label: "全部", getCutoff: () => null },
 ];
 
 interface TaskFilterBarProps {
@@ -75,28 +77,19 @@ export function TaskFilterBar({
   );
 }
 
-/** Filter tasks by status and time window. */
+/** Filter tasks by status and time window. Deleted tasks are always excluded. */
 export function applyFilters<T extends { status: string; created_at: string }>(
   tasks: T[],
   statusFilter: TaskStatus | "all",
   timeFilter: string,
 ): T[] {
-  const TIME_WINDOWS: Record<string, number | null> = {
-    today: 0,
-    "3days": 3,
-    "7days": 7,
-    all: null,
-  };
-  const days = TIME_WINDOWS[timeFilter] ?? null;
+  const option = TIME_OPTIONS.find((o) => o.key === timeFilter);
+  const cutoff = option?.getCutoff() ?? null;
 
   return tasks.filter((t) => {
+    if (t.status === "deleted") return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (days !== null) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - days);
-      cutoff.setHours(0, 0, 0, 0);
-      if (new Date(t.created_at) < cutoff) return false;
-    }
+    if (cutoff !== null && new Date(t.created_at) < cutoff) return false;
     return true;
   });
 }
