@@ -37,6 +37,7 @@ def get_models(config: AppConfig = Depends(get_config)):
                 "speed_zh": m.speed_zh,
                 "stability_zh": m.stability_zh,
                 "warning_zh": m.warning_zh,
+                "sharp_review_zh": m.sharp_review_zh,
                 "notes": m.notes,
             }
             for m in operator
