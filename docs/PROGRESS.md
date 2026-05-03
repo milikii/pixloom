@@ -8,6 +8,17 @@ Pixloom v1 is implemented. V1.1 now has a real background SQLite worker, queued
 batch submission, a shorter tabbed right panel, and an expanded operator model set.
 The remaining V1.1 work is broader subjective model acceptance, not queue plumbing.
 
+V2 frontend work has begun:
+- FastAPI backend under `backend/` with routers for batches, tasks, files, logs,
+  models, upload, and health.
+- React/Next.js SPA under `frontend/` with Gallery White design system
+  (default light mode + dark mode).
+- CSS design tokens completed: full color system, 4-level shadows, border-radius
+  scale, semantic status colors (success/warning/info).
+- All components use semantic tokens via Tailwind v4 `@theme` extensions.
+- `StatusBadge` capsule component implemented (icon + color + text for every
+  task status).
+
 ## Completed
 
 - Product requirements captured in `nas-upscale-webui-requirements副本.md`.
@@ -78,6 +89,22 @@ The remaining V1.1 work is broader subjective model acceptance, not queue plumbi
   slow operator-visible option with an explicit CPU warning.
 - Added regression coverage for accepted-only model visibility, no-operator-ready
   guidance, background queue processing, and batch queue setup failure cleanup.
+- FastAPI backend scaffolded with routers for batches (POST), tasks (GET/DELETE),
+  files (GET input/output), logs (GET by request_id), models (GET guidance), upload
+  (POST), and health (GET). API reuses existing `app/` modules directly.
+- React/Next.js SPA scaffolded with domain-split component tree: shell (ShellHeader,
+  PanelHead, ThemeToggle), submission (UploadZone, ModelPicker, ModelGuidance,
+  OutputParams, SubmitButton), tasks (TaskPanel, TaskDetail, StatusBadge), results
+  (ResultsTabs), and logs (RequestLogs).
+- Design system CSS tokens implemented in `frontend/src/app/globals.css`: full light
+  and dark color palettes, success/warning/info semantic colors with subtle variants,
+  4-level shadow system (card rest/hover, button glow, modal), border-radius scale
+  (xs/sm/md/lg/full).
+- Theme switching via `next-themes` with `class` attribute, default light mode,
+  system preference support, and hydration-mismatch mount guard.
+- All components refactored to reference semantic tokens exclusively; zero hardcoded
+  Tailwind palette colors remain.
+- TypeScript noEmit and ESLint pass clean.
 
 ## Verification
 
@@ -109,7 +136,9 @@ The remaining V1.1 work is broader subjective model acceptance, not queue plumbi
   - local runtime spot checks:
     - `hat-l-4x` tiny sample: passed (`32x24`, `2.984s`)
     - `real-cugan-up3x-denoise3x` tiny sample: passed (`24x18`, `0.061s`)
-- 2026-05-02 UI / progress-debug slice:
+- 2026-05-03 V2 design-system / semantic-token slice:
+  - `npx tsc --noEmit`: passed (zero errors)
+  - `npx eslint src/`: passed (zero errors, zero warnings)
   - `python3 -m py_compile app/app.py app/tasks.py tests/test_app_handler.py tests/test_tasks.py`: passed
   - `.venv/bin/pytest -q`: passed (`77 passed`)
 
