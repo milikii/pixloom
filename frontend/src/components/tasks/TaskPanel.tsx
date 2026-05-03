@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2, Image } from "lucide-react";
 import type { TaskRecord, TaskSummary } from "@/lib/types";
 import { zh } from "@/i18n/zh";
 import { TaskDetail } from "./TaskDetail";
@@ -8,6 +8,20 @@ import { StatusBadge } from "./StatusBadge";
 
 function formatTime(iso: string) {
   return iso.slice(11, 16);
+}
+
+function formatElapsed(seconds: number | null) {
+  if (seconds === null || seconds === undefined) return "";
+  if (seconds < 60) return `${seconds.toFixed(0)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}m${s}s`;
+}
+
+function thumbnailUrl(outputPath: string | null) {
+  if (!outputPath) return null;
+  const name = outputPath.replace(/^.*[\\/]/, "");
+  return `/api/files/output/${encodeURIComponent(name)}`;
 }
 
 export function TaskSummaryView({ summary }: { summary: TaskSummary }) {
@@ -44,33 +58,87 @@ export function TaskListView({
   }
 
   return (
-    <div className="max-h-80 space-y-0.5 overflow-y-auto">
-      {tasks.map((t) => (
-        <button
-          key={t.request_id}
-          onClick={() => onSelect(t.request_id)}
-          className={`w-full rounded-lg px-3 py-2 text-left font-mono text-xs leading-relaxed transition-colors ${
-            selectedId === t.request_id
-              ? "bg-accent-subtle ring-1 ring-accent/20"
-              : "hover:bg-muted/50"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <StatusBadge status={t.status} />
-            <span className="text-muted-foreground">
-              {formatTime(t.created_at)}
-            </span>
-            <span className="truncate text-muted-foreground">
-              {t.input_filename}
-            </span>
-          </div>
-          <div className="ml-5 mt-0.5 text-muted-foreground">
-            {t.progress_step || "—"}{" "}
-            {t.elapsed_seconds !== null ? `| ${t.elapsed_seconds.toFixed(1)}s` : ""}
-            {t.error_code ? ` | ${t.error_code}` : ""}
-          </div>
-        </button>
-      ))}
+    <div className="max-h-80 space-y-1 overflow-y-auto">
+      {tasks.map((t) => {
+        const thumb = thumbnailUrl(t.output_path);
+        const isSelected = selectedId === t.request_id;
+
+        return (
+          <button
+            key={t.request_id}
+            onClick={() => onSelect(t.request_id)}
+            className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
+              isSelected
+                ? "bg-accent-subtle ring-1 ring-accent/20"
+                : "hover:bg-muted/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {/* Thumbnail or placeholder */}
+              {thumb && t.status === "completed" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumb}
+                  alt={t.input_filename}
+                  className="h-10 w-10 shrink-0 rounded-md border border-border object-cover"
+                />
+              ) : t.status === "running" ? (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-info/20 bg-info-subtle">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-info/30 border-t-info" />
+                </div>
+              ) : t.status === "failed" ? (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-destructive/20 bg-destructive-subtle">
+                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                  <Image className="h-4 w-4 text-destructive/50" />
+                </div>
+              ) : (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted/30">
+                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                  <Image className="h-4 w-4 text-muted-foreground/40" />
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={t.status} />
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatTime(t.created_at)}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2 font-mono text-[12px] text-foreground">
+                  <span className="truncate">{t.input_filename}</span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {t.status === "running" && (
+                    <>
+                      <span>{Math.round(t.progress_value * 100)}%</span>
+                      <span className="w-16 h-1 rounded-full bg-muted overflow-hidden">
+                        <span
+                          className="block h-full rounded-full bg-info transition-all duration-500"
+                          style={{ width: `${Math.round(t.progress_value * 100)}%` }}
+                        />
+                      </span>
+                      {t.elapsed_seconds && (
+                        <span>{formatElapsed(t.elapsed_seconds)}</span>
+                      )}
+                    </>
+                  )}
+                  {t.status === "completed" && t.elapsed_seconds && (
+                    <span>{formatElapsed(t.elapsed_seconds)}</span>
+                  )}
+                  {t.status === "failed" && t.error_code && (
+                    <span className="text-destructive/80">{t.error_code}</span>
+                  )}
+                  {t.progress_step && t.status !== "running" && (
+                    <span className="hidden sm:inline">{t.progress_step}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }

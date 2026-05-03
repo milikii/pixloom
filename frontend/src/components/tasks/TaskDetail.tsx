@@ -132,7 +132,8 @@ export function OutputPreview({
     );
   }
 
-  const url = `/api/files/output/${encodeURIComponent(outputPath)}`;
+  const name = outputPath.replace(/^.*[\\/]/, "");
+  const url = `/api/files/output/${encodeURIComponent(name)}`;
 
   return (
     <div className="space-y-3">

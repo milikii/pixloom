@@ -32,7 +32,7 @@ export default function HomePage() {
   const [submitError, setSubmitError] = useState("");
 
   const { data: modelData } = useModels();
-  const { data: taskData } = useTasks(60);
+  const { data: taskData, refetch: refetchTasks } = useTasks(60);
   const { data: logData, isLoading: logLoading } =
     useRequestLog(selectedTaskId);
   const fileUpload = useFileUpload();
@@ -198,7 +198,7 @@ export default function HomePage() {
                     selectedTask={selectedTask}
                     selectedId={selectedTaskId}
                     onSelect={setSelectedTaskId}
-                    onRefresh={() => {}}
+                    onRefresh={() => refetchTasks()}
                     onDelete={handleDelete}
                     deletePending={taskDelete.isPending}
                   />
