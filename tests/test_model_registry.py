@@ -16,6 +16,7 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
     (models_dir / "4x_foolhardy_Remacri.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
     (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
+    (models_dir / "RealESRGAN_x4plus_anime_6B.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -23,6 +24,7 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
         "4x-remacri",
         "realesrgan-x4plus",
         "4x-ultrasharp",
+        "realesrgan-x4plus-anime",
     ]
     assert available[0].display_name == "4x Remacri"
     assert available[0].display_name_zh == "照片自然 - 4x Remacri"
@@ -31,13 +33,14 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
     assert "照片" in available[0].recommended_for_zh
     assert available[0].style_zh == "自然"
     assert available[0].speed_zh == "普通偏慢"
-    assert available[0].stability_zh == "待本机验收"
+    assert available[0].stability_zh == "已首轮实测"
+    assert available[0].exposure == "operator"
 
 
 def test_list_available_models_hides_missing_and_disabled_models(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
-    (models_dir / "SPAN_4x.pth").write_bytes(b"fake")
+    (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -62,6 +65,25 @@ def test_resolve_model_returns_existing_model(tmp_path):
     assert model.stability_zh == "已实机跑通"
 
 
+def test_list_available_models_includes_real_cugan_and_hat_when_present(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "HAT-L-4x.pth").write_bytes(b"fake")
+    (models_dir / "up3x-latest-denoise3x.pth").write_bytes(b"fake")
+
+    available = list_available_models(models_dir, get_default_registry())
+
+    assert [model.id for model in available] == [
+        "hat-l-4x",
+        "real-cugan-up3x-denoise3x",
+    ]
+    assert available[0].backend == "spandrel"
+    assert available[0].speed_zh == "很慢"
+    assert available[1].backend == "spandrel"
+    assert available[1].scale == 3
+    assert "3x" in available[1].warning_zh
+
+
 def test_resolve_model_rejects_unknown_model_id(tmp_path):
     with pytest.raises(ModelNotFoundError, match="Unknown model id: missing"):
         resolve_model("missing", tmp_path, get_default_registry())
@@ -75,10 +97,19 @@ def test_resolve_model_rejects_missing_model_file(tmp_path):
 def test_resolve_model_rejects_disabled_model_even_when_file_exists(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
-    (models_dir / "SPAN_4x.pth").write_bytes(b"fake")
+    (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
 
     with pytest.raises(ModelNotFoundError, match="Model is disabled"):
         resolve_model("span-4x", models_dir, get_default_registry())
+
+
+def test_resolve_model_rejects_enabled_evaluation_model(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "4x_NMKD-Siax_200k.pth").write_bytes(b"fake")
+
+    with pytest.raises(ModelNotFoundError, match="Model is not operator-visible"):
+        resolve_model("4x-nmkd-siax-200k", models_dir, get_default_registry())
 
 
 def test_registry_functions_honor_explicit_empty_registry(tmp_path):
@@ -90,3 +121,24 @@ def test_registry_functions_honor_explicit_empty_registry(tmp_path):
 
     with pytest.raises(ModelNotFoundError, match="Unknown model id: realesrgan-x4plus"):
         resolve_model("realesrgan-x4plus", models_dir, ())
+
+
+def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "4x_foolhardy_Remacri.pth").write_bytes(b"fake")
+    (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
+    (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
+    (models_dir / "RealESRGAN_x4plus_anime_6B.pth").write_bytes(b"fake")
+    (models_dir / "realesr-general-x4v3.pth").write_bytes(b"fake")
+    (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
+
+    available = list_available_models(models_dir, get_default_registry())
+
+    assert [model.id for model in available] == [
+        "4x-remacri",
+        "realesrgan-x4plus",
+        "4x-ultrasharp",
+        "realesrgan-x4plus-anime",
+        "realesr-general-x4v3",
+    ]

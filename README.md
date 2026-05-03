@@ -34,6 +34,8 @@ Current operator-facing behavior:
 │   ├── config.py
 │   ├── history.py
 │   ├── inference.py
+│   ├── model_inventory.py
+│   ├── model_matrix.py
 │   ├── model_registry.py
 │   ├── request_logging.py
 │   ├── tasks.py
@@ -90,9 +92,13 @@ models/RealESRGAN_x4plus_anime_6B.pth
 models/realesr-general-x4v3.pth
 models/4x-UltraSharp.pth
 models/4x_foolhardy_Remacri.pth
+models/HAT-L-4x.pth
+models/up3x-latest-denoise3x.pth
 ```
 
-Only enabled models with existing files appear in the WebUI.
+Only models that are both locally present and marked for operator exposure appear in
+the primary WebUI dropdown. Downloaded-but-unapproved evaluation models may exist on
+disk without being shown in the default submission flow.
 
 Recommended operator choices:
 
@@ -105,6 +111,25 @@ Recommended operator choices:
   images.
 - `快速试跑 - Real-ESRGAN General v3`: quick smoke tests for upload, queue, and
   output path behavior.
+- `质量上限 - HAT-L 4x`: slow CPU path for small batches when detail ceiling matters
+  more than latency.
+- `动漫修复 - Real-CUGAN 3x 去噪`: anime/manga-focused 3x denoise option for
+  compressed line art and animation frames.
+
+Current runtime exposure rule:
+
+- `照片自然 - 4x Remacri`
+- `照片通用 - Real-ESRGAN 4x`
+- `锐化插画 - 4x UltraSharp`
+- `动漫插画 - Real-ESRGAN Anime 6B`
+- `快速试跑 - Real-ESRGAN General v3`
+- `质量上限 - HAT-L 4x`
+- `动漫修复 - Real-CUGAN 3x 去噪`
+
+Additional downloaded models remain in the local evaluation pool until they are
+explicitly promoted. If local model files exist but none are yet accepted for daily
+use, the UI shows a Chinese-first message explaining that the models are present but
+not yet opened to normal operators.
 
 The model guidance panel shows best fit, style, CPU speed class, local acceptance
 status, and a warning before the operator submits a task.
@@ -160,11 +185,20 @@ Successful runs are kept on disk:
 - upscaled results are saved under `output/`
 - request logs are appended under `logs/`
 
-The WebUI task list shows recent task rows from SQLite. Completed tasks also appear
-as thumbnails when their output file still exists. Selecting a task restores its
-details, output preview/download when available, and request log excerpt. Deleting
-a task removes the linked input and output files from local storage when those paths
-are safe runtime paths. Logs remain append-only for audit and request-id lookup.
+The WebUI now submits into a background SQLite-backed worker. The main screen is
+styled as a compact operator console, and the right column is split into `结果`,
+`任务`, and `日志` tabs so the operator does not have to scroll a single long
+sidebar. The task tab auto-refreshes every few seconds from SQLite, keeps task
+detail in one accordion, and collapses completed thumbnails by default. Selecting a
+task restores its details, output preview/download when available, and request log
+excerpt. Deleting a task removes the linked input and output files from local
+storage when those paths are safe runtime paths. Logs remain append-only for audit
+and request-id lookup.
+
+Running tasks now persist progress stage and percentage into SQLite. The selected
+task view estimates remaining time from the current progress fraction and refreshes
+that estimate on the polling timer. On narrow screens, model guidance and output
+parameters are folded into accordions to keep the submission view shorter.
 
 Failed runs clean up output files created by that failed request when possible.
 Queue-backed failures keep the persisted input path in the task row so the failed

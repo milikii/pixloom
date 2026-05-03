@@ -12,6 +12,10 @@
 - Clean up partial files on failure.
 - Emit request-level logs for both success and failure paths.
 - Keep operator-facing text Chinese-first in the UI-facing boundary.
+- Use `ExposureLevel` (operator vs evaluation) to separate trusted models
+  from downloaded-but-unapproved models; apply the check at both the UI
+  dropdown boundary (`list_available_models`) and the worker boundary
+  (`resolve_model`).
 
 ---
 

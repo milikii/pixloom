@@ -1,6 +1,6 @@
 # Pixloom Task Plan
 
-Last updated: 2026-05-01
+Last updated: 2026-05-03
 
 ## P0
 
@@ -89,6 +89,7 @@ Last updated: 2026-05-01
    - [x] Add SQLite `batches` and `tasks` tables.
    - [x] Enqueue, claim, complete, fail, list, and interrupt task records.
    - [x] Route the existing single-image handler through the queue without changing the visible flow.
+   - [x] Run queued work from one in-process background worker instead of keeping the browser callback busy.
    - [x] Cover config, task store, and UI handler behavior with pytest.
 
 2. Multi-image batch UI.
@@ -102,11 +103,14 @@ Last updated: 2026-05-01
    - [x] Let completed tasks preview/download when output still exists.
    - [x] Show failed task error code, request id, and next-step summary.
    - [x] Delete task rows safely by resolving input/output paths under runtime directories.
+   - [x] Split the right column into shorter result/task/log sections and auto-refresh task state from SQLite.
 
 4. Model configuration polish.
-   - [ ] Add clearer CPU-friendly model recommendations.
-   - [ ] Distinguish natural photo, sharp web image, anime/illustration, and quick-test choices.
-   - [ ] Keep heavy or unverified architectures disabled until tested locally.
+   - [x] Add clearer CPU-friendly model recommendations.
+   - [x] Distinguish natural photo, sharp web image, anime/illustration, and quick-test choices.
+   - [x] Keep heavy or unverified architectures disabled until tested locally, unless the user explicitly promotes a slow specialist model.
+   - [x] Keep operator-facing dropdown limited to locally accepted models.
+   - [x] Complete local acceptance matrix for the broader downloaded evaluation pool.
 
 ## Explicitly Deferred
 
