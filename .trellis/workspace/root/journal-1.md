@@ -165,3 +165,60 @@ tokens instead of hardcoded Tailwind palette colors.
 - Add button press spring animation and card hover micro-lift.
 - Verify light/dark mode renders correctly in browser.
 
+
+## Session 4: Task queue filtering and batch download design decisions
+
+**Date**: 2026-05-03
+**Task**: 任务队列分类筛选 + 批量下载
+**Branch**: `pixloom-v1-implementation`
+
+### Decisions
+
+#### 1. 批量下载 — 勾选 + 批量操作模式
+
+当前实现只有一个"下载全部已完成"按钮，替换为：
+- 每个已完成任务行左侧有 checkbox（仅已完成的任务可勾选）
+- 勾选任意数量后，顶部出现批量操作栏：已选 N 个 | 下载所选 | 取消全选
+- 批量下载触发浏览器依次下载（无 zip，NAS 内网无需打包）
+- 后端无需新增批量下载端点，逐个触发 `/api/files/output/{filename}`
+
+#### 2. 任务筛选 — 状态 + 时间双维度
+
+**状态筛选**（胶囊按钮，横向排列）：
+- 全部 | 排队中 | 处理中 | 已完成 | 失败 | 已中断
+- 每个按钮显示对应数量
+- 前端过滤，无需额外 API 请求
+
+**时间筛选**（快捷按钮 + 自定义）：
+- 今天 | 最近 3 天 | 最近 7 天 | 全部
+- 前端按 `created_at` 过滤
+- 后端已有完整时间戳数据，无需 API 改动
+
+**组合筛选**：状态和时间可同时生效（AND 逻辑）
+
+#### 3. UI 布局
+
+```
+┌─────────────────────────────────────────┐
+│  任务列表          14个 | 完成 8 | 失败 2 │
+│                                         │
+│  [全部 14] [完成 8] [失败 2] [进行中 2]  │ ← 状态筛选胶囊
+│  [今天] [3天] [7天] [全部]              │ ← 时间快捷筛选
+│                                         │
+│  ☑ 选中 3 项  [下载所选] [取消选择]     │ ← 批量操作栏（有勾选时出现）
+│                                         │
+│  ☐ [缩略图] ✓ 已完成 photo.jpg  2m3s   │ ← 可勾选的行
+│  ☑ [缩略图] ✓ 已完成 art.png    1m15s  │ ← 已勾选
+│  ☐ [缩略图] ✓ 已完成 scan.webp  45s    │
+│  — [图标]   ◉ 处理中   big.jpg   67%   │ ← 不可勾选
+│  — [图标]   ✕ 失败     bad.png   ERR   │ ← 不可勾选
+└─────────────────────────────────────────┘
+```
+
+### Next Steps
+
+- 实现 TaskFilterBar 组件（状态筛选 + 时间筛选）
+- 实现 BatchActionBar 组件（批量下载操作栏）
+- 改造 TaskListView：每行加 checkbox，区分可勾选/不可勾选
+- 后端 `/api/tasks` 可选加 `?status=` 和 `?since=` 查询参数（前端过滤亦可）
+

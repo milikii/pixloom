@@ -34,10 +34,6 @@ export default function HomePage() {
 
   const models = modelData?.models ?? [];
   const tasks = taskData?.tasks ?? [];
-  const summary = taskData?.summary ?? {
-    total: 0, queued: 0, running: 0, completed: 0,
-    failed: 0, deleted: 0, interrupted: 0, cleanup_text: "",
-  };
   const hiddenCount = modelData?.hidden_count ?? 0;
   const installedCount = models.length + hiddenCount;
 
@@ -147,7 +143,6 @@ export default function HomePage() {
         <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
           <TaskPanel
             tasks={tasks}
-            summary={summary}
             selectedTask={selectedTask}
             selectedId={selectedTaskId}
             onSelect={setSelectedTaskId}
