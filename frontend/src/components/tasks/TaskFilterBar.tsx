@@ -11,14 +11,22 @@ const STATUS_OPTIONS: { key: TaskStatus | "all"; label: string }[] = [
   { key: "interrupted", label: "已中断" },
 ];
 
-const TIME_OPTIONS: { key: string; label: string; getCutoff: () => Date | null }[] = [
-  { key: "today", label: "今天", getCutoff: () => { const d = new Date(); d.setHours(0,0,0,0); return d; } },
-  { key: "yesterday", label: "昨天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-1); d.setHours(0,0,0,0); return d; } },
-  { key: "3days", label: "最近 3 天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-3); d.setHours(0,0,0,0); return d; } },
-  { key: "7days", label: "最近 7 天", getCutoff: () => { const d = new Date(); d.setDate(d.getDate()-7); d.setHours(0,0,0,0); return d; } },
-  { key: "thisMonth", label: "本月", getCutoff: () => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; } },
-  { key: "all", label: "全部", getCutoff: () => null },
+const TIME_OPTIONS: { key: string; label: string; match: (localDate: string) => boolean }[] = [
+  { key: "today", label: "今天", match: (d) => d === todayStr() },
+  { key: "yesterday", label: "昨天", match: (d) => d === yesterdayStr() },
+  { key: "3days", label: "最近 3 天", match: (d) => d >= daysAgoStr(3) },
+  { key: "7days", label: "最近 7 天", match: (d) => d >= daysAgoStr(7) },
+  { key: "thisMonth", label: "本月", match: (d) => d >= thisMonthStartStr() },
+  { key: "all", label: "全部", match: () => true },
 ];
+
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function todayStr(): string { return localDateStr(new Date()); }
+function yesterdayStr(): string { const d = new Date(); d.setDate(d.getDate()-1); return localDateStr(d); }
+function daysAgoStr(n: number): string { const d = new Date(); d.setDate(d.getDate()-n); return localDateStr(d); }
+function thisMonthStartStr(): string { return localDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); }
 
 interface TaskFilterBarProps {
   statusFilter: TaskStatus | "all";
@@ -77,6 +85,11 @@ export function TaskFilterBar({
   );
 }
 
+/** Extract YYYY-MM-DD from an ISO timestamp string. */
+function isoDateStr(iso: string): string {
+  return iso.slice(0, 10);
+}
+
 /** Filter tasks by status and time window. Deleted tasks are always excluded. */
 export function applyFilters<T extends { status: string; created_at: string }>(
   tasks: T[],
@@ -84,12 +97,12 @@ export function applyFilters<T extends { status: string; created_at: string }>(
   timeFilter: string,
 ): T[] {
   const option = TIME_OPTIONS.find((o) => o.key === timeFilter);
-  const cutoff = option?.getCutoff() ?? null;
+  const match = option?.match ?? (() => true);
 
   return tasks.filter((t) => {
     if (t.status === "deleted") return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (cutoff !== null && new Date(t.created_at) < cutoff) return false;
+    if (!match(isoDateStr(t.created_at))) return false;
     return true;
   });
 }
