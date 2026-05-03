@@ -19,20 +19,24 @@ export function ResultsTabs({ tabs, defaultTab }: ResultsTabsProps) {
 
   return (
     <div>
-      <div className="flex overflow-x-auto border-b border-border">
+      {/* Mobile: capsule pills. Desktop: underline tabs. */}
+      <div className="flex overflow-x-auto gap-1.5 md:gap-0 md:border-b md:border-border">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActive(tab.key)}
-            className={`relative shrink-0 px-5 py-3 text-sm font-medium transition-colors duration-150 ${
-              active === tab.key
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`relative shrink-0 text-sm font-medium transition-colors duration-150
+              md:rounded-none md:px-5 md:py-3
+              rounded-full px-4 py-2
+              ${
+                active === tab.key
+                  ? "bg-accent text-white md:bg-transparent md:text-foreground"
+                  : "text-muted-foreground hover:text-foreground md:hover:bg-transparent"
+              }`}
           >
             {tab.label}
             {active === tab.key && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+              <span className="hidden md:block absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
             )}
           </button>
         ))}
