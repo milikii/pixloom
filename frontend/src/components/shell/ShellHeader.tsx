@@ -1,4 +1,5 @@
 import { zh } from "@/i18n/zh";
+import type { ReactNode } from "react";
 
 export function ShellMetric({
   value,
@@ -23,10 +24,12 @@ export function ShellHeader({
   operatorCount,
   installedCount,
   hiddenCount,
+  rightSlot,
 }: {
   operatorCount: number;
   installedCount: number;
   hiddenCount: number;
+  rightSlot?: ReactNode;
 }) {
   const { shell } = zh;
   return (
@@ -45,6 +48,7 @@ export function ShellHeader({
               {shell.copy}
             </p>
           </div>
+          {rightSlot && <div className="shrink-0">{rightSlot}</div>}
         </div>
         <div className="mt-5 grid grid-cols-3 gap-3">
           <ShellMetric value={operatorCount} label={shell.metrics.operator} />
