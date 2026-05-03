@@ -143,7 +143,7 @@ export default function HomePage() {
           />
 
           {submitError && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-destructive dark:border-red-500/20 dark:bg-red-500/10">
+            <div className="mb-4 rounded-lg border border-destructive-subtle bg-destructive-subtle px-4 py-3 text-sm text-destructive">
               {submitError}
             </div>
           )}

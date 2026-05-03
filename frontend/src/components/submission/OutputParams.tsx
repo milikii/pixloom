@@ -5,7 +5,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
-import { zh } from "@/i18n/zh";
 
 interface OutputParamsProps {
   format: string;

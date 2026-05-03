@@ -31,7 +31,7 @@ export function ModelGuidance({
     if (!model && hasLocalModels) {
       return (
         <div className="flex items-start gap-3">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
           <div>
             <p className="text-sm text-foreground">{zh.model.noOperatorReady}</p>
             {hiddenCount > 0 && (
@@ -59,11 +59,11 @@ export function ModelGuidance({
 
     const stabilityIcon =
       model.stability_zh === "已首轮实测" || model.stability_zh.includes("已本机") ? (
-        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        <CheckCircle2 className="h-4 w-4 text-success" />
       ) : model.stability_zh === "未启用" ? (
         <Clock className="h-4 w-4 text-muted-foreground" />
       ) : (
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <AlertTriangle className="h-4 w-4 text-warning" />
       );
 
     return (

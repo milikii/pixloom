@@ -3,27 +3,7 @@
 import { Download } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { zh } from "@/i18n/zh";
-
-function TaskStatusBadge({ task }: { task: TaskRecord }) {
-  const styles: Record<string, string> = {
-    queued: "bg-muted text-muted-foreground",
-    running: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
-    completed:
-      "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
-    failed: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
-    deleted: "bg-muted text-muted-foreground/60",
-    interrupted:
-      "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[task.status] ?? ""}`}
-    >
-      {task.status_label}
-    </span>
-  );
-}
+import { StatusBadge } from "./StatusBadge";
 
 function formatElapsed(seconds: number | null) {
   if (seconds === null || seconds === undefined) return "—";
@@ -44,7 +24,7 @@ export function TaskDetail({ task }: { task: TaskRecord }) {
         <span className="select-all text-foreground">{task.batch_id}</span>
 
         <span className="text-muted-foreground">状态</span>
-        <span><TaskStatusBadge task={task} /></span>
+        <span><StatusBadge status={task.status} /></span>
 
         <span className="text-muted-foreground">创建时间</span>
         <span className="text-foreground">{task.created_at}</span>
@@ -105,7 +85,7 @@ export function TaskStatusDisplay({ task }: { task: TaskRecord | null }) {
         {task.request_id}
       </p>
       <p>
-        <TaskStatusBadge task={task} />
+        <StatusBadge status={task.status} />
       </p>
       <p>
         <span className="text-muted-foreground">模型: </span>
@@ -124,7 +104,7 @@ export function TaskStatusDisplay({ task }: { task: TaskRecord | null }) {
         </>
       )}
       {task.status === "completed" && (
-        <p className="text-emerald-600 dark:text-emerald-400">
+        <p className="text-success">
           {zh.progress.processingComplete} | {formatElapsed(task.elapsed_seconds)}
         </p>
       )}
@@ -161,6 +141,7 @@ export function OutputPreview({
          * next/image can't be used for arbitrary API-served paths
          * without whitelisting in next.config.ts. Using <img> is fine
          * for an internal tool. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
           alt={`Upscale result for ${requestId}`}

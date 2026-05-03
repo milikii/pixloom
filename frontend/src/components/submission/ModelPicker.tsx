@@ -23,8 +23,6 @@ export function ModelPicker({
   onSelect,
   disabled,
 }: ModelPickerProps) {
-  const selected = models.find((m) => m.id === selectedId);
-
   return (
     <div className="relative mb-5">
       <select
