@@ -40,20 +40,27 @@ class BackgroundTaskWorker:
             self._thread.join(timeout=timeout)
 
     def _run(self) -> None:
-        import sys
+        import traceback as tb
+        _logf = open("/tmp/worker.log", "a")
+        def _log(msg):
+            _logf.write(f"[pixloom-worker] {msg}\n")
+            _logf.flush()
+        _log("thread started")
         try:
             registry = get_default_registry()
+            _log(f"registry loaded ({len(registry)} models)")
         except Exception as exc:
-            print(f"[pixloom-worker] FATAL: get_default_registry failed: {exc}", file=sys.stderr)
+            _log(f"FATAL registry: {exc}")
+            tb.print_exc(file=_logf)
             return
         runner = BackendRunner()
-        print("[pixloom-worker] started", file=sys.stderr)
+        _log("backend runner ready, entering loop")
 
         while not self._stop_event.is_set():
             try:
                 task = claim_next_queued_task(self._config)
             except Exception as exc:
-                print(f"[pixloom-worker] claim error: {exc}", file=sys.stderr)
+                _log(f"claim error: {exc}")
                 self._stop_event.wait(timeout=2.0)
                 continue
 
@@ -61,11 +68,12 @@ class BackgroundTaskWorker:
                 self._stop_event.wait(timeout=2.0)
                 continue
 
-            print(f"[pixloom-worker] processing {task.request_id[:20]} model={task.model_id}", file=sys.stderr)
+            _log(f"processing {task.request_id[:30]} model={task.model_id}")
             try:
                 self._process_task(task, registry, runner)
             except Exception as exc:
-                print(f"[pixloom-worker] task failed: {exc}", file=sys.stderr)
+                _log(f"CRASH processing task: {exc}")
+                tb.print_exc()
                 try:
                     mark_task_failed(
                         self._config,
@@ -117,18 +125,25 @@ class BackgroundTaskWorker:
                 keep_input_on_failure=True,
             )
         except Exception as exc:
+            import traceback
             code = getattr(exc, "code", "INFERENCE_FAILED")
+            detail = f"{exc.__class__.__name__}: {exc}"
+            if exc.__cause__:
+                detail += f" | caused by: {exc.__cause__.__class__.__name__}: {exc.__cause__}"
+            with open("/tmp/worker.log", "a") as f:
+                f.write(f"[pixloom-worker] inference FAILED: {detail}\n")
+                traceback.print_exc(file=f)
             mark_task_failed(
                 self._config,
                 task.request_id,
                 error_code=code,
-                error_detail=str(exc),
+                error_detail=detail,
             )
             return
 
         mark_task_completed(
             self._config,
-            task.request_id,
+            request_id=task.request_id,
             output_path=result.output_path,
             elapsed_seconds=result.elapsed_seconds,
         )
