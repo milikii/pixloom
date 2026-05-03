@@ -9,13 +9,7 @@ import { ModelPicker } from "@/components/submission/ModelPicker";
 import { ModelGuidance } from "@/components/submission/ModelGuidance";
 import { OutputParams } from "@/components/submission/OutputParams";
 import { SubmitButton } from "@/components/submission/SubmitButton";
-import { ResultsTabs } from "@/components/results/ResultsTabs";
-import {
-  TaskStatusDisplay,
-  OutputPreview,
-} from "@/components/tasks/TaskDetail";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
-import { RequestLogs } from "@/components/logs/RequestLogs";
 import { useModels } from "@/hooks/useModels";
 import { useTasks, useTaskDelete, useRequestLog } from "@/hooks/useTasks";
 import { useFileUpload, useSubmitBatch } from "@/hooks/useSubmitBatch";
@@ -28,12 +22,11 @@ export default function HomePage() {
   const [outputFormat, setOutputFormat] = useState("PNG");
   const [quality, setQuality] = useState(90);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   const { data: modelData } = useModels();
   const { data: taskData, refetch: refetchTasks } = useTasks(60);
-  const { data: logData, isLoading: logLoading } =
+  const { data: logData } =
     useRequestLog(selectedTaskId);
   const fileUpload = useFileUpload();
   const submitBatch = useSubmitBatch();
@@ -54,7 +47,6 @@ export default function HomePage() {
   const handleSubmit = useCallback(async () => {
     if (selectedFiles.length === 0 || !modelId) return;
     setSubmitError("");
-    setStatusMessage("");
 
     try {
       const uploadResult = await fileUpload.mutateAsync(selectedFiles);
@@ -65,7 +57,6 @@ export default function HomePage() {
         output_format: outputFormat,
         quality,
       });
-      setStatusMessage(batchResult.status_message);
       setSelectedTaskId(batchResult.first_request_id);
       setSelectedFiles([]);
     } catch (err) {
@@ -152,70 +143,18 @@ export default function HomePage() {
           />
         </div>
 
-        {/* RIGHT: Results */}
-                <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
-          <ResultsTabs
-            tabs={[
-              {
-                key: "result",
-                label: zh.tabs.result,
-                content: (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                        批次回执
-                      </label>
-                      <div className="rounded-xl border border-border bg-muted/30 p-4">
-                        <pre className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-foreground">
-                          {statusMessage || "等待提交…"}
-                        </pre>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                        当前任务状态
-                      </label>
-                      <div className="rounded-xl border border-border bg-muted/30 p-4">
-                        <TaskStatusDisplay task={selectedTask} />
-                      </div>
-                    </div>
-
-                    <OutputPreview
-                      outputPath={selectedTask?.output_path ?? null}
-                      requestId={selectedTaskId ?? ""}
-                    />
-                  </div>
-                ),
-              },
-              {
-                key: "tasks",
-                label: zh.tabs.tasks,
-                content: (
-                  <TaskPanel
-                    tasks={tasks}
-                    summary={summary}
-                    selectedTask={selectedTask}
-                    selectedId={selectedTaskId}
-                    onSelect={setSelectedTaskId}
-                    onRefresh={() => refetchTasks()}
-                    onDelete={handleDelete}
-                    deletePending={taskDelete.isPending}
-                  />
-                ),
-              },
-              {
-                key: "logs",
-                label: zh.tabs.logs,
-                content: (
-                  <RequestLogs
-                    requestId={selectedTaskId}
-                    excerpt={logData?.excerpt ?? null}
-                    loading={logLoading}
-                  />
-                ),
-              },
-            ]}
+        {/* RIGHT: Tasks + Preview */}
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
+          <TaskPanel
+            tasks={tasks}
+            summary={summary}
+            selectedTask={selectedTask}
+            selectedId={selectedTaskId}
+            onSelect={setSelectedTaskId}
+            onRefresh={() => refetchTasks()}
+            onDelete={handleDelete}
+            deletePending={taskDelete.isPending}
+            logExcerpt={logData?.excerpt ?? null}
           />
         </div>
       </div>
