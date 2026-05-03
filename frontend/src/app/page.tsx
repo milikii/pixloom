@@ -88,14 +88,11 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-[1380px] px-4 pb-10 pt-5">
-      <div className="mb-4 flex items-center justify-end">
-        <ThemeToggle />
-      </div>
-
       <ShellHeader
         operatorCount={models.length}
         installedCount={installedCount}
         hiddenCount={hiddenCount}
+        rightSlot={<ThemeToggle variant="header" />}
       />
 
       <div className="grid gap-4 lg:grid-cols-[5fr_6fr]">
