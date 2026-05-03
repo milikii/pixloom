@@ -4,30 +4,7 @@ import { RefreshCw, Trash2 } from "lucide-react";
 import type { TaskRecord, TaskSummary } from "@/lib/types";
 import { zh } from "@/i18n/zh";
 import { TaskDetail } from "./TaskDetail";
-
-function statusColor(status: string) {
-  const map: Record<string, string> = {
-    queued: "text-muted-foreground",
-    running: "text-blue-600 dark:text-blue-400",
-    completed: "text-emerald-600 dark:text-emerald-400",
-    failed: "text-destructive",
-    deleted: "text-muted-foreground/50",
-    interrupted: "text-amber-600 dark:text-amber-400",
-  };
-  return map[status] ?? "text-foreground";
-}
-
-function statusIcon(status: string) {
-  const map: Record<string, string> = {
-    queued: "●",
-    running: "◉",
-    completed: "✓",
-    failed: "✕",
-    deleted: "◌",
-    interrupted: "◐",
-  };
-  return map[status] ?? "●";
-}
+import { StatusBadge } from "./StatusBadge";
 
 function formatTime(iso: string) {
   return iso.slice(11, 16);
@@ -79,12 +56,7 @@ export function TaskListView({
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className={statusColor(t.status)}>
-              {statusIcon(t.status)}
-            </span>
-            <span className="font-medium text-foreground">
-              {t.status_label}
-            </span>
+            <StatusBadge status={t.status} />
             <span className="text-muted-foreground">
               {formatTime(t.created_at)}
             </span>
@@ -162,7 +134,7 @@ export function TaskPanel({
         <button
           onClick={onDelete}
           disabled={!selectedId || disabled || deletePending}
-          className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-red-50 hover:border-destructive disabled:pointer-events-none disabled:opacity-40 dark:border-red-500/20 dark:hover:bg-red-500/10"
+          className="inline-flex items-center gap-2 rounded-lg border border-destructive-subtle px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive-subtle hover:border-destructive disabled:pointer-events-none disabled:opacity-40"
         >
           {deletePending ? (
             <RefreshCw className="h-4 w-4 animate-spin" />

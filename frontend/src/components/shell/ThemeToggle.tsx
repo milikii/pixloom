@@ -8,6 +8,8 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // next-themes mount guard to avoid hydration mismatch
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
@@ -21,9 +23,9 @@ export function ThemeToggle() {
       aria-label={theme === "dark" ? "切换到亮色模式" : "切换到深夜模式"}
     >
       {theme === "dark" ? (
-        <Sun className="h-4 w-4 text-amber-400" />
+        <Sun className="h-4 w-4 text-warning" />
       ) : (
-        <Moon className="h-4 w-4 text-indigo-400" />
+        <Moon className="h-4 w-4 text-accent" />
       )}
     </button>
   );

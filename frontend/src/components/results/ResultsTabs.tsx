@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { zh } from "@/i18n/zh";
 
 interface Tab {
   key: string;
