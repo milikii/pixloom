@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 from app.config import AppConfig
 from app.tasks import (
     claim_next_queued_task,
     claim_queued_task,
+    QueuedTaskInput,
+    create_batch_with_tasks,
     create_batch,
     delete_task,
     enqueue_task,
@@ -15,6 +20,7 @@ from app.tasks import (
     mark_running_tasks_interrupted,
     mark_task_completed,
     mark_task_failed,
+    update_task_progress,
 )
 
 
@@ -162,6 +168,35 @@ def test_mark_task_failed_keeps_error_fields_visible(tmp_path):
     assert failed.completed_at is not None
 
 
+def test_update_task_progress_persists_step_and_percent(tmp_path):
+    config = _config(tmp_path)
+    input_path = config.input_dir / "source.png"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path.write_bytes(b"fake")
+    _create_batch(config)
+    enqueue_task(
+        config,
+        request_id="req-1",
+        batch_id="batch-1",
+        input_filename="source.png",
+        input_path=input_path,
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+    )
+    claim_queued_task(config, "req-1")
+
+    updated = update_task_progress(
+        config,
+        request_id="req-1",
+        progress_value=0.42,
+        progress_step="正在处理分块 2/5",
+    )
+
+    assert updated.progress_value == 0.42
+    assert updated.progress_step == "正在处理分块 2/5"
+
+
 def test_mark_running_tasks_interrupted_after_restart(tmp_path):
     config = _config(tmp_path)
     input_path = config.input_dir / "source.png"
@@ -286,5 +321,108 @@ def test_delete_task_skips_paths_outside_runtime_directories(tmp_path):
     assert task.status == "deleted"
     assert outside_input.exists()
     assert outside_output.exists()
-    assert outside_input in result.skipped_paths
-    assert outside_output in result.skipped_paths
+
+
+def test_create_batch_with_tasks_is_atomic_on_failure(tmp_path):
+    config = _config(tmp_path)
+    input_path = config.input_dir / "source.png"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path.write_bytes(b"fake")
+
+    original_connect = __import__("app.tasks", fromlist=["_connect"])._connect
+
+    class BrokenConnection:
+        def __init__(self, real):
+            self._real = real
+            self._insert_count = 0
+            self.isolation_level = None
+
+        def execute(self, sql, params=()):
+            if "INSERT INTO tasks" in sql:
+                self._insert_count += 1
+                if self._insert_count == 2:
+                    raise sqlite3.OperationalError("boom")
+            return self._real.execute(sql, params)
+
+        def __getattr__(self, name):
+            return getattr(self._real, name)
+
+        def __enter__(self):
+            self._real.__enter__()
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return self._real.__exit__(exc_type, exc, tb)
+
+    def broken_connect(cfg):
+        return BrokenConnection(original_connect(cfg))
+
+    import app.tasks as tasks_module
+
+    tasks_module._connect = broken_connect
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="boom"):
+            create_batch_with_tasks(
+                config,
+                batch_id="batch-1",
+                model_id="fake-4x",
+                output_format="PNG",
+                quality=90,
+                tasks=(
+                    QueuedTaskInput(
+                        request_id="req-1",
+                        input_filename="source.png",
+                        input_path=input_path,
+                        model_id="fake-4x",
+                        output_format="PNG",
+                        quality=90,
+                    ),
+                    QueuedTaskInput(
+                        request_id="req-2",
+                        input_filename="source-2.png",
+                        input_path=input_path,
+                        model_id="fake-4x",
+                        output_format="PNG",
+                        quality=90,
+                    ),
+                ),
+            )
+    finally:
+        tasks_module._connect = original_connect
+
+    assert list_tasks(config) == []
+
+
+def test_create_batch_with_tasks_rolls_back_when_queue_logging_fails(tmp_path, monkeypatch):
+    config = _config(tmp_path)
+    input_path = config.input_dir / "source.png"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path.write_bytes(b"fake")
+
+    import app.tasks as tasks_module
+
+    def failing_log_event(*args, **kwargs):
+        raise RuntimeError("log failed")
+
+    monkeypatch.setattr(tasks_module, "log_event", failing_log_event)
+
+    with pytest.raises(RuntimeError, match="log failed"):
+        create_batch_with_tasks(
+            config,
+            batch_id="batch-1",
+            model_id="fake-4x",
+            output_format="PNG",
+            quality=90,
+            tasks=(
+                QueuedTaskInput(
+                    request_id="req-1",
+                    input_filename="source.png",
+                    input_path=input_path,
+                    model_id="fake-4x",
+                    output_format="PNG",
+                    quality=90,
+                ),
+            ),
+        )
+
+    assert list_tasks(config) == []

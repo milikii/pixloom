@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.app import format_model_guidance, handle_batch_upscale, handle_upscale
+from app.app import (
+    format_model_guidance,
+    handle_batch_enqueue,
+    handle_batch_upscale,
+    handle_upscale,
+    process_next_queued_task,
+)
 from app.config import AppConfig
 from app.inference import InferenceError, UpscaleResult
 from app.model_registry import ResolvedModel
@@ -199,6 +205,121 @@ def test_handle_batch_upscale_keeps_processing_after_one_failure(tmp_path, tiny_
     assert "BACKEND_FAILURE" in request_log
 
 
+def test_handle_batch_enqueue_records_queued_tasks_without_processing(tmp_path, tiny_png):
+    second = tmp_path / "second.png"
+    Image.new("RGB", (8, 6)).save(second)
+    config = _config(tmp_path)
+
+    preview, download, status, request_log, selected_request_id = handle_batch_enqueue(
+        image_paths=[str(tiny_png), str(second)],
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        config=config,
+        models=[_model(tmp_path)],
+    )
+
+    tasks = list_tasks(config)
+    assert preview is None
+    assert download is None
+    assert selected_request_id
+    assert "后台串行处理" in status
+    assert "总数：2" in status
+    assert len(tasks) == 2
+    assert {task.status for task in tasks} == {"queued"}
+    assert "[queued] task_queued" in request_log
+
+
+def test_process_next_queued_task_claims_and_completes_work(tmp_path, tiny_png, monkeypatch):
+    config = _config(tmp_path)
+
+    from app import app as app_module
+
+    preview, download, status, request_log, selected_request_id = handle_batch_enqueue(
+        image_paths=[str(tiny_png)],
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        config=config,
+        models=[_model(tmp_path)],
+    )
+    assert preview is None
+    assert download is None
+    assert selected_request_id
+    assert "已入队：1" in status
+    assert "[queued] task_queued" in request_log
+
+    monkeypatch.setattr(app_module, "resolve_model", lambda model_id, models_dir: _model(tmp_path))
+
+    processed = process_next_queued_task(config, service=BatchFakeService(tmp_path))
+
+    assert processed is not None
+    assert processed.status == "completed"
+    tasks = list_tasks(config)
+    assert len(tasks) == 1
+    assert tasks[0].status == "completed"
+    assert tasks[0].output_path is not None
+    assert tasks[0].output_path.is_file()
+
+
+def test_process_next_queued_task_updates_progress_fields(tmp_path, tiny_png, monkeypatch):
+    config = _config(tmp_path)
+
+    from app import app as app_module
+
+    handle_batch_enqueue(
+        image_paths=[str(tiny_png)],
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        config=config,
+        models=[_model(tmp_path)],
+    )
+    monkeypatch.setattr(app_module, "resolve_model", lambda model_id, models_dir: _model(tmp_path))
+    process_next_queued_task(config, service=BatchFakeService(tmp_path))
+
+    task = list_tasks(config)[0]
+    assert task.status == "completed"
+    assert task.progress_value == 1.0
+    assert task.progress_step == "处理完成"
+
+
+def test_handle_batch_upscale_cleans_up_when_queue_setup_fails(
+    tmp_path, tiny_png, monkeypatch
+):
+    second = tmp_path / "second.png"
+    Image.new("RGB", (8, 6)).save(second)
+    config = _config(tmp_path)
+
+    from app import app as app_module
+
+    original_queue = app_module._queue_persisted_batch
+
+    def failing_queue(**kwargs):
+        raise RuntimeError("queue setup failed")
+
+    monkeypatch.setattr(app_module, "_queue_persisted_batch", failing_queue)
+
+    preview, download, status, request_log = handle_batch_upscale(
+        image_paths=[str(tiny_png), str(second)],
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        config=config,
+        models=[_model(tmp_path)],
+    )
+
+    monkeypatch.setattr(app_module, "_queue_persisted_batch", original_queue)
+
+    assert preview is None
+    assert download is None
+    assert "错误代码：BATCH_QUEUE_SETUP_FAILED" in status
+    assert "批量任务创建失败" in status
+    assert list_tasks(config) == []
+    assert list(config.input_dir.glob("*")) == []
+    assert "BATCH_QUEUE_SETUP_FAILED" in request_log
+
+
 def test_handle_upscale_maps_error_to_status(tmp_path, tiny_png):
     service = FakeService(
         InferenceError(
@@ -295,3 +416,22 @@ def test_format_model_guidance_returns_chinese_text(tmp_path):
     assert "风格：未标注" in guidance
     assert "状态：未标注" in guidance
     assert "测试环境专用模型" in guidance
+
+
+def test_format_model_guidance_explains_no_operator_ready_models():
+    guidance = format_model_guidance(None, [], has_local_models=True)
+
+    assert "当前本地已有模型" in guidance
+    assert "还没有已验收并开放给日常操作的模型" in guidance
+
+
+def test_format_model_guidance_mentions_hidden_local_models(tmp_path):
+    guidance = format_model_guidance(
+        "fake-4x",
+        [_model(tmp_path)],
+        has_local_models=True,
+        hidden_local_models_count=2,
+    )
+
+    assert "当前仅显示已验收模型" in guidance
+    assert "2 个本地模型仍在评估中" in guidance

@@ -40,6 +40,10 @@ Examples:
 - Use Chinese-first labels and operator guidance.
 - Keep button text action-oriented and short.
 - Expose model suitability before the user clicks start.
+- Each model must carry Chinese-first guidance fields:
+  `display_name_zh`, `recommended_for_zh`, `warning_zh`, `speed_zh`,
+  `style_zh`, `stability_zh`. These feed the model dropdown and guidance
+  block; never leave them empty for an operator-visible model.
 - Status and error boxes should include request id when relevant.
 - Task list must show status labels for queued/running/completed/failed/deleted/
   interrupted rows.

@@ -34,6 +34,9 @@ Examples:
 - backend not implemented
 - upscale failed
 - output save failed
+- model disabled (operator attempted to use a disabled model)
+- model not operator-visible (operator attempted to use an evaluation-only model)
+- model file missing (registry entry exists but file is absent)
 
 ---
 
@@ -56,15 +59,18 @@ Backend layer:
 - raises `InferenceError`
 - logs the failure with `request_id`
 - cleans up partial files
+- rejects evaluation-only models at the worker boundary via `resolve_model()`
 
 UI layer:
 
 - converts `InferenceError` to a readable Chinese multiline status block
 - logs UI-side rejections such as missing image or unavailable model
+- filters model dropdown to operator-visible models via `list_available_models()`
 
 Relevant files:
 
 - `app/inference.py`
+- `app/model_registry.py`
 - `app/app.py`
 
 Current examples:

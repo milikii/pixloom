@@ -45,6 +45,8 @@ class TaskRecord:
     started_at: datetime | None
     completed_at: datetime | None
     elapsed_seconds: float | None
+    progress_value: float
+    progress_step: str
     error_code: str
     error_detail: str
     retry_of_request_id: str
@@ -57,6 +59,17 @@ class TaskDeleteResult:
     missing_paths: tuple[Path, ...]
     skipped_paths: tuple[Path, ...]
     message_zh: str
+
+
+@dataclass(frozen=True)
+class QueuedTaskInput:
+    request_id: str
+    input_filename: str
+    input_path: Path
+    model_id: str
+    output_format: str
+    quality: int
+    retry_of_request_id: str = ""
 
 
 def build_batch_id() -> str:
@@ -92,6 +105,8 @@ def initialize_task_store(config: AppConfig) -> None:
                 started_at TEXT NOT NULL DEFAULT '',
                 completed_at TEXT NOT NULL DEFAULT '',
                 elapsed_seconds REAL,
+                progress_value REAL NOT NULL DEFAULT 0,
+                progress_step TEXT NOT NULL DEFAULT '',
                 error_code TEXT NOT NULL DEFAULT '',
                 error_detail TEXT NOT NULL DEFAULT '',
                 retry_of_request_id TEXT NOT NULL DEFAULT '',
@@ -101,6 +116,16 @@ def initialize_task_store(config: AppConfig) -> None:
             CREATE INDEX IF NOT EXISTS idx_tasks_status_created
                 ON tasks(status, created_at);
             """
+        )
+        _ensure_task_column(
+            connection,
+            "progress_value",
+            "ALTER TABLE tasks ADD COLUMN progress_value REAL NOT NULL DEFAULT 0",
+        )
+        _ensure_task_column(
+            connection,
+            "progress_step",
+            "ALTER TABLE tasks ADD COLUMN progress_step TEXT NOT NULL DEFAULT ''",
         )
 
 
@@ -183,6 +208,96 @@ def enqueue_task(
     return task
 
 
+def create_batch_with_tasks(
+    config: AppConfig,
+    *,
+    batch_id: str,
+    model_id: str,
+    output_format: str,
+    quality: int,
+    tasks: tuple[QueuedTaskInput, ...],
+) -> tuple[TaskRecord, ...]:
+    initialize_task_store(config)
+    batch_created_at = _now()
+    task_created_at = _now()
+
+    with _connect(config) as connection:
+        connection.isolation_level = None
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                """
+                INSERT INTO batches (
+                    id, created_at, model_id, output_format, quality, total_count
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    batch_id,
+                    batch_created_at,
+                    model_id,
+                    output_format,
+                    int(quality),
+                    len(tasks),
+                ),
+            )
+            for task in tasks:
+                connection.execute(
+                    """
+                    INSERT INTO tasks (
+                        request_id, batch_id, status, input_filename, input_path,
+                        model_id, output_format, quality, created_at, retry_of_request_id
+                    ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        task.request_id,
+                        batch_id,
+                        task.input_filename,
+                        str(task.input_path),
+                        task.model_id,
+                        task.output_format,
+                        int(task.quality),
+                        task_created_at,
+                        task.retry_of_request_id,
+                    ),
+                )
+            connection.execute("COMMIT")
+        except Exception:
+            try:
+                connection.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+
+    records = []
+    try:
+        for task in tasks:
+            log_event(
+                config,
+                request_id=task.request_id,
+                event="task_queued",
+                status="queued",
+                model_id=task.model_id,
+                input_filename=task.input_filename,
+                input_path=task.input_path,
+            )
+            record = get_task(config, task.request_id)
+            if record is None:
+                raise RuntimeError(f"Queued task not found: {task.request_id}")
+            records.append(record)
+    except Exception:
+        with _connect(config) as connection:
+            connection.execute(
+                "DELETE FROM tasks WHERE batch_id = ?",
+                (batch_id,),
+            )
+            connection.execute(
+                "DELETE FROM batches WHERE id = ?",
+                (batch_id,),
+            )
+        raise
+    return tuple(records)
+
+
 def claim_next_queued_task(config: AppConfig) -> TaskRecord | None:
     return _claim_queued_task(config)
 
@@ -228,7 +343,10 @@ def _claim_queued_task(
         connection.execute(
             """
             UPDATE tasks
-            SET status = 'running', started_at = ?
+            SET status = 'running',
+                started_at = ?,
+                progress_value = 0.02,
+                progress_step = '任务已开始'
             WHERE request_id = ? AND status = 'queued'
             """,
             (started_at, claimed_request_id),
@@ -260,6 +378,8 @@ def mark_task_completed(
         status="completed",
         output_path=output_path,
         elapsed_seconds=elapsed_seconds,
+        progress_value=1.0,
+        progress_step="处理完成",
     )
     log_event(
         config,
@@ -286,6 +406,7 @@ def mark_task_failed(
         config,
         request_id=request_id,
         status="failed",
+        progress_step="处理失败",
         error_code=error_code,
         error_detail=error_detail,
     )
@@ -312,6 +433,7 @@ def mark_running_tasks_interrupted(config: AppConfig) -> int:
             UPDATE tasks
             SET status = 'interrupted',
                 completed_at = ?,
+                progress_step = '任务中断',
                 error_code = 'TASK_INTERRUPTED',
                 error_detail = 'Task was running when the app restarted.'
             WHERE status = 'running'
@@ -436,6 +558,35 @@ def list_tasks(
     return [_task_from_row(row) for row in rows]
 
 
+def update_task_progress(
+    config: AppConfig,
+    *,
+    request_id: str,
+    progress_value: float,
+    progress_step: str,
+) -> TaskRecord:
+    initialize_task_store(config)
+    normalized_value = max(0.0, min(1.0, float(progress_value)))
+    with _connect(config) as connection:
+        connection.execute(
+            """
+            UPDATE tasks
+            SET progress_value = ?,
+                progress_step = ?
+            WHERE request_id = ?
+            """,
+            (
+                normalized_value,
+                progress_step,
+                request_id,
+            ),
+        )
+    task = get_task(config, request_id)
+    if task is None:
+        raise RuntimeError(f"Task not found: {request_id}")
+    return task
+
+
 def _connect(config: AppConfig) -> sqlite3.Connection:
     connection = sqlite3.connect(config.db_path)
     connection.row_factory = sqlite3.Row
@@ -460,6 +611,8 @@ def _update_finished_task(
     status: str,
     output_path: Path | None = None,
     elapsed_seconds: float | None = None,
+    progress_value: float | None = None,
+    progress_step: str | None = None,
     error_code: str = "",
     error_detail: str = "",
 ) -> TaskRecord:
@@ -476,6 +629,8 @@ def _update_finished_task(
                 completed_at = ?,
                 output_path = COALESCE(NULLIF(?, ''), output_path),
                 elapsed_seconds = ?,
+                progress_value = COALESCE(?, progress_value),
+                progress_step = COALESCE(?, progress_step),
                 error_code = ?,
                 error_detail = ?
             WHERE request_id = ?
@@ -485,6 +640,8 @@ def _update_finished_task(
                 completed_at,
                 str(output_path) if output_path else "",
                 elapsed_seconds,
+                progress_value,
+                progress_step,
                 error_code,
                 error_detail,
                 request_id,
@@ -514,6 +671,8 @@ def _task_from_row(row: sqlite3.Row) -> TaskRecord:
         elapsed_seconds=(
             float(row["elapsed_seconds"]) if row["elapsed_seconds"] is not None else None
         ),
+        progress_value=float(row["progress_value"] or 0),
+        progress_step=row["progress_step"],
         error_code=row["error_code"],
         error_detail=row["error_detail"],
         retry_of_request_id=row["retry_of_request_id"],
@@ -528,6 +687,19 @@ def _parse_optional_timestamp(value: str) -> datetime | None:
     if not value:
         return None
     return _parse_timestamp(value)
+
+
+def _ensure_task_column(
+    connection: sqlite3.Connection,
+    column_name: str,
+    alter_sql: str,
+) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(tasks)").fetchall()
+    }
+    if column_name not in columns:
+        connection.execute(alter_sql)
 
 
 def _parse_timestamp(value: str) -> datetime:

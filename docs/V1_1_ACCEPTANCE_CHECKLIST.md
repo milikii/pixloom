@@ -1,0 +1,200 @@
+# Pixloom V1.1 Acceptance Checklist
+
+Last updated: 2026-05-03
+
+## Goal
+
+Run one focused manual acceptance pass for the current V1.1 launch-set contract:
+
+- the primary dropdown shows only operator-visible accepted models
+- request-id failure tracing works end to end
+- batch and partial-batch behavior is clear from the UI
+- task deletion removes only linked runtime files
+
+## Current Expected Operator-Visible Models
+
+At the time this checklist was written, the default runtime-visible set is:
+
+- `照片自然 - 4x Remacri`
+- `照片通用 - Real-ESRGAN 4x`
+- `锐化插画 - 4x UltraSharp`
+- `动漫插画 - Real-ESRGAN Anime 6B`
+- `快速试跑 - Real-ESRGAN General v3`
+- `质量上限 - HAT-L 4x`
+- `动漫修复 - Real-CUGAN 3x 去噪`
+
+Other local model files may exist in `models/`, but they should not appear in the
+primary submission dropdown unless they are explicitly promoted into the operator set.
+
+## Before You Start
+
+1. Rebuild and restart the app:
+
+```bash
+docker compose build
+docker compose up -d --force-recreate
+```
+
+2. Confirm the app is reachable:
+
+```bash
+docker compose logs --tail=80 upscale-webui
+```
+
+3. Confirm current local model inventory:
+
+```bash
+find models -maxdepth 1 -type f | sort
+python3 -m app.model_inventory
+```
+
+4. Confirm current task database path:
+
+```bash
+ls -lh state/pixloom.sqlite3
+```
+
+## Acceptance Run
+
+### 1. Phone UI Load
+
+Open the app from a real phone browser.
+
+Expected:
+
+- page loads
+- the main action is visible without hunting
+- the dropdown only shows the current accepted operator models
+- the right side is split into `结果` / `任务` / `日志` tabs instead of one long panel
+- if more local model files exist than the dropdown shows, the guidance/status copy
+  explains that only accepted models are currently exposed
+
+Record:
+
+- phone model / browser
+- whether the model guidance is readable on first viewport
+- whether the task/log tabs feel shorter and easier to scan than the old long sidebar
+- whether the accepted-only behavior is obvious
+
+### 2. Controlled Failure With Request ID
+
+Use one controlled failure path and capture the request id shown in the UI.
+
+Recommended low-risk method:
+
+1. Open the app and select an accepted model in the dropdown.
+2. On the NAS, temporarily rename that selected model file:
+
+```bash
+mv models/RealESRGAN_x4plus_anime_6B.pth models/RealESRGAN_x4plus_anime_6B.pth.off
+```
+
+3. Submit a normal image from the already-open page.
+4. Confirm the UI shows a Chinese error and a request id.
+5. Restore the file immediately:
+
+```bash
+mv models/RealESRGAN_x4plus_anime_6B.pth.off models/RealESRGAN_x4plus_anime_6B.pth
+```
+
+6. Rebuild or restart only if needed:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+Evidence to collect:
+
+- error code shown in UI
+- request id shown in UI
+- matching JSONL lines:
+
+```bash
+grep -R "<REQUEST_ID>" logs
+```
+
+### 3. Real Batch
+
+Submit one real batch from a phone with at least 2 images.
+
+Expected:
+
+- one `batch_id`
+- multiple `request_id`s
+- task list shows all items
+- completed items remain visible after refresh
+
+Evidence:
+
+```bash
+sqlite3 state/pixloom.sqlite3 "select batch_id, request_id, status, input_filename from tasks order by created_at desc limit 10;"
+```
+
+### 4. Real Partial Batch
+
+Submit one batch where at least one item succeeds and one item fails.
+
+Expected:
+
+- status text clearly says this is partial success, not full success
+- failed item is visible in task text/list
+- the user knows to inspect the task list for details
+
+Evidence:
+
+- screenshot or notes of the returned status text
+- matching task rows:
+
+```bash
+sqlite3 state/pixloom.sqlite3 "select batch_id, request_id, status, error_code from tasks order by created_at desc limit 10;"
+```
+
+### 5. Delete Safety
+
+Delete one completed task from the WebUI.
+
+Expected:
+
+- only linked input/output files are removed
+- task row becomes `deleted`
+- audit log keeps the delete event
+
+Evidence:
+
+```bash
+sqlite3 state/pixloom.sqlite3 "select request_id, status, input_path, output_path from tasks order by created_at desc limit 10;"
+grep -R "task_deleted" logs
+```
+
+## Local Model Matrix Capture
+
+For every model you actually place in `models/`, record:
+
+- file name
+- checksum / file identity
+- backend compatibility
+- elapsed time
+- output judgment
+- operator recommendation state
+
+Suggested commands:
+
+```bash
+find models -maxdepth 1 -type f | sort
+sha256sum models/*
+ls -lh models
+python3 -m app.model_inventory
+.venv/bin/python -m app.model_matrix --input input/1777260396442.png
+```
+
+Write the results back into `docs/MODEL_EVALUATION.md`.
+
+## Closure Decision
+
+After the acceptance run, make one explicit decision:
+
+- keep the current small accepted launch set
+- expand the accepted launch set
+- continue evaluation before expanding
+
+Record that decision in `docs/PROGRESS.md`.

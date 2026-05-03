@@ -1,0 +1,13 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/commands/trellis/check.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Validate task/batch contracts and deletion safety if backend behavior changes."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Validate request-id and Chinese failure contract."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Validate JSONL evidence and event coverage."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Validate regression test depth and failure cleanup."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Validate trusted-model-first phone flow and task visibility."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Validate startup model list semantics and task refresh state."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Validate Chinese guidance, partial-batch clarity, and delete UX."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Check launch-set contract consistency across docs, registry, UI, and tests."}
+{"file": "tests/test_model_registry.py", "reason": "Registry exposure regression coverage."}
+{"file": "tests/test_app_handler.py", "reason": "UI handler and partial-batch regression coverage."}
+{"file": "tests/test_tasks.py", "reason": "Task-store and delete-path regression coverage."}
