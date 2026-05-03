@@ -6,11 +6,10 @@
 
 ## Overview
 
-Pixloom v1 does **not** have a separate browser app. The frontend is a Gradio UI
-declared in Python inside `app/app.py`.
-
-Do not invent a `src/` React app, client-side router, or JS state layer unless a
-future task explicitly requires it.
+Pixloom v1 uses a Gradio UI declared in `app/app.py`. Pixloom v2 adds a React/Next.js
+SPA under `frontend/` served by a FastAPI backend under `backend/`. Both frontends
+coexist while v2 is under development; the Gradio UI remains the primary operator
+surface until the SPA is feature-complete.
 
 ---
 
@@ -18,39 +17,63 @@ future task explicitly requires it.
 
 ```text
 app/
-├── app.py              # Gradio Blocks layout, labels, UI event wiring
+├── app.py              # Gradio Blocks layout, labels, UI event wiring (v1)
 ├── model_registry.py   # UI-facing model labels and guidance metadata
 ├── inference.py        # Status payloads returned to the UI
 └── request_logging.py  # Request ids used by user-visible messages
+
+frontend/
+├── src/
+│   ├── app/            # Next.js App Router (layout, page, globals.css)
+│   ├── components/
+│   │   ├── shell/      # ShellHeader, PanelHead, ThemeToggle
+│   │   ├── submission/ # UploadZone, ModelPicker, ModelGuidance, OutputParams, SubmitButton
+│   │   ├── tasks/      # TaskPanel, TaskDetail, StatusBadge
+│   │   ├── results/    # ResultsTabs
+│   │   └── logs/       # RequestLogs
+│   ├── hooks/          # useModels, useTasks, useSubmitBatch
+│   ├── i18n/           # Chinese-first copy (zh.ts)
+│   ├── lib/            # api-client, types
+│   └── providers/      # QueryProvider, ThemeProvider
+├── package.json
+├── next.config.ts
+└── tsconfig.json
 ```
 
 ---
 
 ## Module Organization
 
-- UI structure and component wiring stay in `app/app.py`.
-- Model-selection help text comes from `app/model_registry.py`.
-- Status text and failure meaning should be derived from backend contracts, not
-  duplicated ad-hoc in multiple places.
-
-If a future UI change still fits Gradio, keep it in `app/app.py` and extract only
-pure formatting helpers when the file starts to repeat itself.
+- V1 Gradio UI structure and component wiring stay in `app/app.py`.
+- V2 React components live under `frontend/src/components/` organized by domain
+  (shell, submission, tasks, results, logs).
+- Design tokens (colors, shadows, border-radius) are defined as CSS custom properties
+  in `frontend/src/app/globals.css` and mapped to Tailwind v4 `@theme` extensions.
+- Theme switching uses `next-themes` with `class` attribute, defaulting to `light`.
+- API client code in `frontend/src/lib/api-client.ts` calls the FastAPI backend.
+- Chinese-first UI copy lives in `frontend/src/i18n/zh.ts`.
 
 ---
 
 ## Naming Conventions
 
-- UI formatting helpers use clear names such as `format_status`,
-  `format_model_guidance`, and `format_error_message`.
-- Nested callback handlers inside `build_demo()` should stay small and explicit:
-  `on_submit`, `on_model_change`.
-- Visible labels should be Chinese-first.
+- React components use PascalCase filenames: `ShellHeader.tsx`, `StatusBadge.tsx`.
+- Hooks use `use` prefix: `useModels.ts`, `useTasks.ts`.
+- UI formatting helpers use clear names such as `formatElapsed`, `formatTime`.
+- CSS custom properties use semantic names: `--success`, `--warning`, `--info`,
+  `--shadow-card-rest`, `--radius-md`.
+- Visible labels are Chinese-first.
 
 ---
 
 ## Examples
 
-- Layout and event wiring:
+- V1 Gradio layout and event wiring:
   - `app/app.py`
-- Model guidance source:
-  - `app/model_registry.py`
+- V2 React SPA entry and page shell:
+  - `frontend/src/app/page.tsx`
+  - `frontend/src/app/layout.tsx`
+- Design tokens:
+  - `frontend/src/app/globals.css`
+- Semantic status badge component:
+  - `frontend/src/components/tasks/StatusBadge.tsx`

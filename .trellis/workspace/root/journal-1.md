@@ -101,3 +101,67 @@ Closed the V1.1 model matrix and launch set task: audited the exposure contract 
 
 - Manual phone/NAS acceptance per `docs/V1_1_ACCEPTANCE_CHECKLIST.md`.
 - Re-evaluate launch set after manual acceptance pass.
+
+
+## Session 3: V2 design system CSS tokens and semantic color unification
+
+**Date**: 2026-05-03
+**Task**: Pixloom v2 前端设计系统
+**Branch**: `pixloom-v1-implementation`
+
+### Summary
+
+Completed the CSS design token infrastructure for the v2 React SPA, created a reusable
+StatusBadge component, and unified all existing components to reference semantic design
+tokens instead of hardcoded Tailwind palette colors.
+
+### Main Changes
+
+- Added success/warning/info CSS custom properties with subtle background variants
+  for both light and dark modes in `frontend/src/app/globals.css`.
+- Added 4-level shadow system: `--shadow-card-rest`, `--shadow-card-hover-val`,
+  `--shadow-button-glow`, `--shadow-modal-val` with separate light/dark values.
+- Added border-radius token scale: `--radius-xs` (4px), `--radius-sm` (8px),
+  `--radius-md` (12px), `--radius-lg` (16px), `--radius-full` (9999px).
+- Mapped all new tokens to Tailwind v4 `@theme inline` extensions.
+- Created `StatusBadge` capsule component with icon + color + text triple encoding
+  for every task status. Running status shows animated `Loader2` spinner.
+- Replaced inline `TaskStatusBadge` in TaskDetail.tsx with shared component.
+- Updated TaskPanel.tsx: removed unused `statusColor`/`statusIcon` helpers, wired
+  StatusBadge, switched delete button to `destructive-subtle` tokens.
+- Fixed ModelGuidance.tsx: `text-amber-500` → `text-warning`, `text-emerald-500`
+  → `text-success`.
+- Fixed ThemeToggle.tsx: `text-amber-400` → `text-warning`, `text-indigo-400`
+  → `text-accent`.
+- Fixed page.tsx: error banner uses `border-destructive-subtle bg-destructive-subtle`.
+- Removed unused imports from ResultsTabs.tsx, OutputParams.tsx, ModelPicker.tsx.
+- Updated `.trellis/spec/frontend/directory-structure.md` and `component-guidelines.md`
+  to document the v2 React SPA conventions.
+- Updated `README.md` directory layout and description to reflect v2 architecture.
+- Updated `docs/PROGRESS.md` with v2 phase status and verification entries.
+
+### Testing
+
+- [OK] `npx tsc --noEmit`: passed (zero errors)
+- [OK] `npx eslint src/`: passed (zero errors, zero warnings)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea3f3f9` | feat: v1.1 model matrix closure + v2 API and SPA scaffold |
+| `3db6899` | feat: complete CSS design tokens and unify component semantic colors |
+
+### Status
+
+[OK] **Completed** — CSS token infrastructure and component unification done;
+     ready for next design system phase (mobile layout, ShellHeader ThemeToggle
+     integration, animation details).
+
+### Next Steps
+
+- Integrate ThemeToggle into ShellHeader dark bar.
+- Implement mobile-first responsive layout (<768px breakpoint).
+- Add button press spring animation and card hover micro-lift.
+- Verify light/dark mode renders correctly in browser.
+

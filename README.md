@@ -1,6 +1,8 @@
 # Pixloom
 
-Pixloom is a self-hosted NAS image upscaling WebUI. It runs as a small Docker Compose service with a Gradio interface and CPU-only inference.
+Pixloom is a self-hosted NAS image upscaling WebUI. It runs as a small Docker Compose service with CPU-only inference.
+
+The current v1 release uses a Gradio interface. A v2 React SPA + FastAPI backend is under development in `frontend/` and `backend/`.
 
 The current release is intentionally narrow:
 
@@ -21,6 +23,8 @@ Current operator-facing behavior:
 - the task list shows queued, running, completed, failed, deleted, and interrupted work
 - failures show operator guidance instead of a raw traceback
 - request events are appended as JSONL under `logs/`
+- a FastAPI backend (`backend/`) serves the same task/upload/model contracts for the v2 SPA
+- a React/Next.js SPA (`frontend/`) is under development with Gallery White design system
 
 ## Directory Layout
 
@@ -40,6 +44,31 @@ Current operator-facing behavior:
 │   ├── request_logging.py
 │   ├── tasks.py
 │   └── spandrel_backend.py
+├── backend/
+│   ├── requirements.txt
+│   ├── pixloom_api/
+│   │   ├── main.py
+│   │   ├── deps.py
+│   │   └── routers/
+│   │       ├── batches.py
+│   │       ├── files.py
+│   │       ├── health.py
+│   │       ├── logs.py
+│   │       ├── models.py
+│   │       ├── tasks.py
+│   │       └── upload.py
+│   ├── worker/
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── i18n/
+│   │   ├── lib/
+│   │   └── providers/
+│   ├── package.json
+│   └── next.config.ts
 ├── models/
 ├── input/
 ├── output/
