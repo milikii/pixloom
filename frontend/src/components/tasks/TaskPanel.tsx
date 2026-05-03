@@ -104,6 +104,11 @@ export function TaskPanel({
 
   const handleClearSelection = () => setSelectedIds(new Set());
 
+  const handleSelect = (id: string) => {
+    onSelect(id);
+    setDetailOpen(true);
+  };
+
   const previewUrl = selectedTask ? fileUrl(selectedTask.output_path) : null;
 
   return (
@@ -205,7 +210,7 @@ export function TaskPanel({
 
                 {/* Task row */}
                 <button
-                  onClick={() => onSelect(t.request_id)}
+                  onClick={() => handleSelect(t.request_id)}
                   className="flex flex-1 items-center gap-2 py-1.5 pr-2 text-left"
                 >
                   {/* Thumbnail */}
