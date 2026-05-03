@@ -18,7 +18,7 @@ export function SubmitButton({
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className="w-full rounded-lg bg-accent py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md hover:shadow-accent/25 active:translate-y-0 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
+      className="w-full rounded-lg bg-accent py-3.5 text-[15px] font-semibold text-white shadow-button transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-button active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
     >
       {loading ? (
         <span className="inline-flex items-center gap-2">
