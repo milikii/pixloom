@@ -30,3 +30,4 @@ Thumbs.db
 
 # Dev tooling
 compose.override.yml
+.gstack/
