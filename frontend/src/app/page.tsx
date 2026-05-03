@@ -97,7 +97,7 @@ export default function HomePage() {
 
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-[5fr_6fr]">
         {/* LEFT: Submission */}
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm sm:rounded-2xl sm:p-5">
+                <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
           <PanelHead
             eyebrow={zh.panels.input.eyebrow}
             title={zh.panels.input.title}
@@ -153,7 +153,7 @@ export default function HomePage() {
         </div>
 
         {/* RIGHT: Results */}
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm sm:rounded-2xl sm:p-5">
+                <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
           <ResultsTabs
             tabs={[
               {
