@@ -37,14 +37,16 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
     assert available[0].exposure == "operator"
 
 
-def test_list_available_models_hides_missing_and_disabled_models(tmp_path):
+def test_list_available_models_includes_promoted_spandrel_models(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
-    assert available == []
+    assert [model.id for model in available] == ["span-4x"]
+    assert available[0].backend == "spandrel"
+    assert available[0].exposure == "operator"
 
 
 def test_resolve_model_returns_existing_model(tmp_path):
@@ -94,22 +96,24 @@ def test_resolve_model_rejects_missing_model_file(tmp_path):
         resolve_model("realesrgan-x4plus", tmp_path, get_default_registry())
 
 
-def test_resolve_model_rejects_disabled_model_even_when_file_exists(tmp_path):
+def test_resolve_model_returns_promoted_spandrel_model(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
 
-    with pytest.raises(ModelNotFoundError, match="Model is disabled"):
-        resolve_model("span-4x", models_dir, get_default_registry())
+    model = resolve_model("span-4x", models_dir, get_default_registry())
+
+    assert model.id == "span-4x"
+    assert model.backend == "spandrel"
 
 
 def test_resolve_model_rejects_enabled_evaluation_model(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
-    (models_dir / "4x_NMKD-Siax_200k.pth").write_bytes(b"fake")
+    (models_dir / "APISR_4x_int8.onnx").write_bytes(b"fake")
 
     with pytest.raises(ModelNotFoundError, match="Model is not operator-visible"):
-        resolve_model("4x-nmkd-siax-200k", models_dir, get_default_registry())
+        resolve_model("apisr-4x-int8", models_dir, get_default_registry())
 
 
 def test_registry_functions_honor_explicit_empty_registry(tmp_path):
@@ -132,6 +136,8 @@ def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path)
     (models_dir / "RealESRGAN_x4plus_anime_6B.pth").write_bytes(b"fake")
     (models_dir / "realesr-general-x4v3.pth").write_bytes(b"fake")
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
+    (models_dir / "APISR_4x_int8.onnx").write_bytes(b"fake")
+    (models_dir / "codeformer.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -141,4 +147,5 @@ def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path)
         "4x-ultrasharp",
         "realesrgan-x4plus-anime",
         "realesr-general-x4v3",
+        "span-4x",
     ]

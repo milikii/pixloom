@@ -160,6 +160,11 @@ explicitly promoted. If local model files exist but none are yet accepted for da
 use, the UI shows a Chinese-first message explaining that the models are present but
 not yet opened to normal operators.
 
+The current FastAPI worker only implements the Spandrel backend. ONNX/custom
+weights such as APISR, CodeFormer, and GFPGAN may be installed locally for
+evaluation, but they stay hidden from the primary dropdown until their backend paths
+are implemented.
+
 The model guidance panel shows best fit, style, CPU speed class, local acceptance
 status, and a warning before the operator submits a task.
 

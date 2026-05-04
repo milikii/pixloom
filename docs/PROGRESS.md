@@ -1,6 +1,6 @@
 # Pixloom Progress
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Current Phase
 
@@ -105,6 +105,10 @@ V2 frontend work has begun:
 - All components refactored to reference semantic tokens exclusively; zero hardcoded
   Tailwind palette colors remain.
 - TypeScript noEmit and ESLint pass clean.
+- Background worker failure handling now marks unsupported-backend tasks as failed
+  instead of leaving them stuck as running.
+- APISR, CodeFormer, and GFPGAN remain installed evaluation assets but are hidden
+  from the operator dropdown until their ONNX/custom backends are implemented.
 
 ## Verification
 
@@ -141,6 +145,14 @@ V2 frontend work has begun:
   - `npx eslint src/`: passed (zero errors, zero warnings)
   - `python3 -m py_compile app/app.py app/tasks.py tests/test_app_handler.py tests/test_tasks.py`: passed
   - `.venv/bin/pytest -q`: passed (`77 passed`)
+- 2026-05-04 stuck-task / unsupported-backend slice:
+  - `python3 -m py_compile backend/worker/daemon.py app/model_registry.py app/tasks.py app/inference.py`: passed
+  - `.venv/bin/pytest -q tests/test_tasks.py tests/test_inference_validation.py`: passed (`24 passed`)
+  - `GET /api/health`: passed (`models_installed=16`, `models_operator=13`)
+  - `GET /api/tasks?limit=5`: passed; stuck APISR task is now `failed` with
+    `BACKEND_NOT_IMPLEMENTED`
+  - `tests/test_model_registry.py`: updated for the current 13-model Spandrel
+    operator set plus 3 hidden unsupported-backend models
 
 ## Pixloom V1 Runtime Smoke Test
 
@@ -180,9 +192,14 @@ complete. Remaining purely manual steps:
 - Delete one completed task from the WebUI and confirm only the linked input/output
   files are removed.
 
-## Closure Decision (2026-05-03)
+## Closure Decision (2026-05-04)
 
-Keep the current small accepted launch set of 7 operator-visible models:
+Keep the current accepted launch set limited to models the current Spandrel worker
+can actually run. The API currently reports 16 installed model files, 13
+operator-visible Spandrel models, and 3 hidden evaluation-only unsupported-backend
+models.
+
+The original 7-model conservative set remains the safest daily-use subset:
 
 1. `照片自然 - 4x Remacri`
 2. `照片通用 - Real-ESRGAN 4x`
@@ -192,14 +209,13 @@ Keep the current small accepted launch set of 7 operator-visible models:
 6. `质量上限 - HAT-L 4x`
 7. `动漫修复 - Real-CUGAN 3x 去噪`
 
-The broader 16-file evaluation pool (NMKD-Siax, SPAN, RealPLKSR, DAT, OmniSR,
-CodeFormer, GFPGAN, APISR) has smoke-test results and real-image outputs for
-candidate models, but none have been promoted into the operator set. The exposure
-contract is enforced at two layers: `list_available_models()` at the UI boundary
-and `resolve_model()` at the worker boundary. Batch-ingest failure safety is
-verified through SQLite transactions with immediate rollback and input cleanup.
+Additional Spandrel-compatible models promoted into the operator dropdown are
+NMKD-Siax, SPAN, RealPLKSR, DAT, and OmniSR variants. The exposure contract is
+enforced at two layers: `list_available_models()` at the UI boundary and
+`resolve_model()` at the worker boundary. Batch-ingest failure safety is verified
+through SQLite transactions with immediate rollback and input cleanup.
 
-Additional evaluation models (ONNX, face-restoration, custom-runtime) remain
-blocked on backend work and stay in the evaluation pool.
+APISR (`onnxruntime`), CodeFormer (`custom`), and GFPGAN (`custom`) remain blocked
+on backend work and stay in the hidden evaluation pool.
 
 The launch set will be re-evaluated after the manual phone/NAS acceptance pass.
