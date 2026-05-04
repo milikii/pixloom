@@ -34,13 +34,14 @@
 - Unit tests must cover happy path and failure path behavior.
 - Validation tests must cover unsupported format, invalid image content, size
   limits, and backend failures.
-- UI handler tests must cover Chinese message formatting and request-id exposure.
+- API tests must cover Chinese response fields, task error fields, and request-id
+  exposure.
 - Logging tests must verify that JSONL rows are written for success and failure.
 
 Current examples:
 
 - `tests/test_inference_validation.py`
-- `tests/test_app_handler.py`
+- `tests/test_api.py`
 - `tests/test_model_registry.py`
 
 ---

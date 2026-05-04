@@ -2,13 +2,12 @@ import type {
   BatchCreateRequest,
   BatchCreateResponse,
   LogExcerptResponse,
-  ModelGuidanceResponse,
   ModelListResponse,
   TaskListResponse,
   UploadResponse,
 } from "./types";
 
-const API_BASE = "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 async function request<T>(
   path: string,
@@ -40,10 +39,6 @@ async function request<T>(
 export const apiClient = {
   getModels(): Promise<ModelListResponse> {
     return request("/models");
-  },
-
-  getModelGuidance(modelId: string): Promise<ModelGuidanceResponse> {
-    return request(`/models/${modelId}/guidance`);
   },
 
   async uploadFiles(files: File[]): Promise<UploadResponse> {

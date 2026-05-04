@@ -23,11 +23,11 @@ When integrating a skill:
 
 | Skill Type | Target |
 |------------|--------|
-| UI, Gradio, visual QA, frontend workflow | `.trellis/spec/frontend/` |
+| UI, React, visual QA, frontend workflow | `.trellis/spec/frontend/` |
 | Backend, model runtime, API, storage workflow | `.trellis/spec/backend/` |
 | Cross-cutting development workflow | `.trellis/spec/guides/` |
 | Documentation-only workflow | `.trellis/spec/guides/` or `.trellis/workflow.md` |
-| Test workflow for the Gradio app | `.trellis/spec/frontend/` plus related backend guide when inference/logging is involved |
+| Test workflow for the React/FastAPI app | `.trellis/spec/frontend/` plus related backend guide when inference/logging is involved |
 
 If a skill spans multiple targets, write the stable cross-cutting contract in
 `.trellis/spec/guides/` and link from the affected target indexes only when the

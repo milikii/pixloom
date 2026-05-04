@@ -38,7 +38,7 @@ docker compose up -d --force-recreate
 2. Confirm the app is reachable:
 
 ```bash
-docker compose logs --tail=80 upscale-webui
+docker compose logs --tail=80 pixloom
 ```
 
 3. Confirm current local model inventory:
@@ -65,6 +65,7 @@ Expected:
 - page loads
 - the main action is visible without hunting
 - the dropdown only shows the current accepted operator models
+- output size choices show `原始`, `2K`, `4K`, and `8K` before hidden save parameters
 - the right side is split into `结果` / `任务` / `日志` tabs instead of one long panel
 - if more local model files exist than the dropdown shows, the guidance/status copy
   explains that only accepted models are currently exposed
@@ -117,6 +118,8 @@ grep -R "<REQUEST_ID>" logs
 
 Submit one real batch from a phone with at least 2 images.
 
+Run at least one image with `原始` and one with `2K` or `4K`.
+
 Expected:
 
 - one `batch_id`
@@ -127,7 +130,7 @@ Expected:
 Evidence:
 
 ```bash
-sqlite3 state/pixloom.sqlite3 "select batch_id, request_id, status, input_filename from tasks order by created_at desc limit 10;"
+sqlite3 state/pixloom.sqlite3 "select batch_id, request_id, status, input_filename, output_size_preset from tasks order by created_at desc limit 10;"
 ```
 
 ### 4. Real Partial Batch

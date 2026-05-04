@@ -6,9 +6,9 @@
 
 ## Overview
 
-Pixloom v1 is a small Python service. There is no separate API layer, no database
-package, and no service framework. The backend is the set of Python modules under
-`app/` that support one Gradio entrypoint.
+Pixloom is a small Python service with a FastAPI API under `backend/` and reusable
+runtime modules under `app/`. The React frontend is built separately and served as
+static files by the FastAPI process in production.
 
 Write new backend code in the smallest existing module that owns the behavior.
 Do not create extra layers just to look "enterprise".
@@ -19,7 +19,6 @@ Do not create extra layers just to look "enterprise".
 
 ```text
 app/
-├── app.py              # Gradio UI wiring and user-visible message formatting
 ├── config.py           # Environment-driven runtime configuration
 ├── history.py          # Filesystem-backed history listing, deletion, retention cleanup
 ├── inference.py        # Validation, persistence, orchestration, error contract
@@ -30,8 +29,12 @@ app/
 ├── spandrel_backend.py # Concrete CPU inference backend
 └── tasks.py            # SQLite task queue: batches, tasks, claims, status transitions
 
+backend/
+├── pixloom_api/        # FastAPI app, dependencies, and routers
+└── worker/             # In-process background SQLite task worker
+
 tests/
-├── test_app_handler.py
+├── test_api.py
 ├── test_config.py
 ├── test_history.py
 ├── test_inference_validation.py
@@ -47,7 +50,7 @@ tests/
 
 ## Module Organization
 
-- Keep UI formatting in `app/app.py`.
+- Keep HTTP request/response shaping in `backend/pixloom_api/routers/`.
 - Keep environment parsing in `app/config.py`.
 - Keep history listing, history deletion, and retention cleanup in `app/history.py`.
 - Keep request validation, file persistence, and request lifecycle orchestration in
@@ -72,16 +75,15 @@ small helper function to an existing module over inventing a new package.
 
 - Python files use `snake_case.py`.
 - Public dataclasses use noun names: `AppConfig`, `ResolvedModel`, `UpscaleResult`.
-- User-visible formatter helpers use verb phrases: `format_status`,
-  `format_model_guidance`, `format_error_message`.
+- User-visible API helpers use explicit names tied to the response they produce.
 - Request lifecycle helpers should be explicit: `build_request_id`, `log_event`.
 
 ---
 
 ## Examples
 
-- UI boundary and Chinese-first status formatting:
-  - `app/app.py`
+- API boundary and Chinese-first response shaping:
+  - `backend/pixloom_api/routers/`
 - Request validation and cleanup on failure:
   - `app/inference.py`
 - History reconstruction and local file deletion:

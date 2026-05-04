@@ -20,11 +20,6 @@ export interface ModelListResponse {
   hidden_count: number;
 }
 
-export interface ModelGuidanceResponse {
-  model_id: string;
-  guidance_markdown: string;
-}
-
 export type TaskStatus =
   | "queued"
   | "running"
@@ -44,6 +39,8 @@ export interface TaskRecord {
   model_id: string;
   output_format: string;
   quality: number;
+  output_size_preset: OutputSizePreset;
+  output_size_label: string;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
@@ -85,7 +82,10 @@ export interface BatchCreateRequest {
   model_id: string;
   output_format: string;
   quality: number;
+  output_size_preset: OutputSizePreset;
 }
+
+export type OutputSizePreset = "native" | "2k" | "4k" | "8k";
 
 export interface BatchCreateResponse {
   batch_id: string;

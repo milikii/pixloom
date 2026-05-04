@@ -12,6 +12,11 @@ from PIL import Image, UnidentifiedImageError
 
 from app.config import AppConfig
 from app.model_registry import ResolvedModel
+from app.output_size import (
+    NATIVE_OUTPUT_SIZE_PRESET,
+    OutputSizePlan,
+    build_output_size_plan,
+)
 from app.request_logging import build_request_id, log_event
 
 
@@ -64,6 +69,8 @@ class UpscaleResult:
     output_size: tuple[int, int]
     model_name: str
     elapsed_seconds: float
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET
+    target_longest_side: int | None = None
     request_id: str = ""
 
 
@@ -87,6 +94,8 @@ def _run_backend(
 class BackendRunner:
     def __init__(self) -> None:
         self._spandrel_backend = None
+        self._onnx_backend = None
+        self._face_backend = None
 
     def upscale(self, request: UpscaleRequest, progress_callback=None) -> Image.Image:
         if request.model.backend == "spandrel":
@@ -96,6 +105,26 @@ class BackendRunner:
                 self._spandrel_backend = SpandrelBackend()
             return _run_backend(
                 self._spandrel_backend,
+                request,
+                progress_callback=progress_callback,
+            )
+        if request.model.backend == "onnxruntime":
+            if self._onnx_backend is None:
+                from app.onnx_backend import OnnxRuntimeBackend
+
+                self._onnx_backend = OnnxRuntimeBackend()
+            return _run_backend(
+                self._onnx_backend,
+                request,
+                progress_callback=progress_callback,
+            )
+        if request.model.backend == "custom":
+            if self._face_backend is None:
+                from app.face_restoration_backend import FaceRestorationBackend
+
+                self._face_backend = FaceRestorationBackend()
+            return _run_backend(
+                self._face_backend,
                 request,
                 progress_callback=progress_callback,
             )
@@ -208,12 +237,18 @@ def build_output_path(
     model: ResolvedModel,
     original_name: str,
     output_format: str,
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET,
 ) -> Path:
     config.output_dir.mkdir(parents=True, exist_ok=True)
     save_format = normalize_output_format(output_format)
     extension = "jpg" if save_format == "JPEG" else save_format.lower()
     original_slug = _slug(original_name)
-    filename = f"{_timestamp()}_{original_slug}_{model.id}_{model.scale}x.{extension}"
+    preset_suffix = (
+        ""
+        if output_size_preset == NATIVE_OUTPUT_SIZE_PRESET
+        else f"_{output_size_preset}"
+    )
+    filename = f"{_timestamp()}_{original_slug}_{model.id}_{model.scale}x{preset_suffix}.{extension}"
     return _unique_path(config.output_dir / filename)
 
 
@@ -236,6 +271,64 @@ def _unlink_if_exists(path: Path | None) -> None:
         pass
 
 
+def _resize_image_file(
+    input_path: Path,
+    output_path: Path,
+    size: tuple[int, int],
+) -> None:
+    with Image.open(input_path) as image:
+        image.convert("RGB").resize(size, Image.Resampling.LANCZOS).save(output_path)
+
+
+def _resize_output_image(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+    if image.size == size:
+        return image
+    resized = image.resize(size, Image.Resampling.LANCZOS)
+    image.close()
+    return resized
+
+
+def _prepared_input_path(config: AppConfig, request_token: str) -> Path:
+    config.input_dir.mkdir(parents=True, exist_ok=True)
+    return _unique_path(config.input_dir / f"{request_token}_prepared.png")
+
+
+def _validate_output_size_plan(
+    plan: OutputSizePlan,
+    config: AppConfig,
+) -> None:
+    prepared_longest = max(plan.prepared_input_size)
+    final_longest = max(plan.final_output_size)
+    if prepared_longest > config.max_input_side:
+        raise InferenceError(
+            code="PREPARED_INPUT_TOO_LARGE",
+            user_message_zh="目标尺寸需要的中间输入超过当前限制。",
+            likely_cause_zh=(
+                f"目标 {plan.label_zh} 需要先准备最长边 {prepared_longest}px 的中间图，"
+                f"超过当前输入限制 {config.max_input_side}px。"
+            ),
+            suggested_action_zh="请改选较小的输出尺寸，或调高 PIXLOOM_MAX_INPUT_SIDE 后再试。",
+            detail=(
+                f"Prepared input side {prepared_longest}px exceeds the maximum input side "
+                f"of {config.max_input_side}px."
+            ),
+        )
+    if final_longest > config.max_output_side:
+        raise InferenceError(
+            code="OUTPUT_TOO_LARGE",
+            user_message_zh="输出图片尺寸超过当前限制。",
+            likely_cause_zh=(
+                f"目标 {plan.label_zh} 的最长边为 {final_longest}px，"
+                f"超过当前限制 {config.max_output_side}px。"
+            ),
+            suggested_action_zh="请改选较小的输出尺寸，或调高 PIXLOOM_MAX_OUTPUT_SIDE 后再试。",
+            detail=(
+                f"Output side {final_longest}px exceeds the maximum output side "
+                f"of {config.max_output_side}px."
+            ),
+        )
+
+
 def run_upscale(
     image_path: Path,
     original_name: str,
@@ -248,12 +341,16 @@ def run_upscale(
     progress_callback=None,
     pre_persisted_input: bool = False,
     keep_input_on_failure: bool = False,
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET,
 ) -> UpscaleResult:
     request_token = request_id or build_request_id()
     config.ensure_directories()
     upload: UploadInfo | None = None
     stored_input: Path | None = None
+    backend_input: Path | None = None
+    prepared_input: Path | None = None
     output_path: Path | None = None
+    size_plan: OutputSizePlan | None = None
 
     log_event(
         config,
@@ -262,34 +359,41 @@ def run_upscale(
         status="started",
         model_id=model.id,
         input_filename=original_name,
+        output_size_preset=output_size_preset,
     )
 
     runner = backend or BackendRunner()
     try:
         upload = validate_upload(image_path, config)
         normalize_output_format(output_format)
-        expected_output_side = max(upload.width, upload.height) * model.scale
-        if expected_output_side > config.max_output_side:
-            raise InferenceError(
-                code="OUTPUT_TOO_LARGE",
-                user_message_zh="输出图片尺寸超过当前限制。",
-                likely_cause_zh=(
-                    f"按 {model.scale}x 放大后，最长边会达到 {expected_output_side}px，"
-                    f"超过当前限制 {config.max_output_side}px。"
-                ),
-                suggested_action_zh="请换一张更小的图，或调高 PIXLOOM_MAX_OUTPUT_SIDE 后再试。",
-                detail=(
-                    f"Output side {expected_output_side}px exceeds the maximum output side "
-                    f"of {config.max_output_side}px."
-                ),
-            )
+        size_plan = build_output_size_plan(
+            input_size=(upload.width, upload.height),
+            model_scale=model.scale,
+            preset=output_size_preset,
+            max_prepared_input_side=config.max_input_side,
+        )
+        _validate_output_size_plan(size_plan, config)
 
         stored_input = (
             image_path
             if pre_persisted_input
             else persist_upload(image_path, config, original_name)
         )
-        output_path = build_output_path(config, model, original_name, output_format)
+        backend_input = stored_input
+        if size_plan.requires_pre_resize:
+            prepared_input = _prepared_input_path(config, request_token)
+            if progress_callback is not None:
+                progress_callback("正在准备目标尺寸", 0.1)
+            _resize_image_file(stored_input, prepared_input, size_plan.prepared_input_size)
+            backend_input = prepared_input
+
+        output_path = build_output_path(
+            config,
+            model,
+            original_name,
+            output_format,
+            output_size_preset=size_plan.preset,
+        )
         log_event(
             config,
             request_id=request_token,
@@ -299,17 +403,24 @@ def run_upscale(
             input_filename=original_name,
             input_path=stored_input,
             input_dimensions=(upload.width, upload.height),
+            output_dimensions=size_plan.final_output_size,
             output_path=output_path,
+            output_size_preset=size_plan.preset,
+            target_longest_side=size_plan.target_longest_side,
         )
         started = time.perf_counter()
         if progress_callback is not None:
             progress_callback("准备开始推理", 0.15)
         output_image = _run_backend(
             runner,
-            UpscaleRequest(input_path=stored_input, model=model, config=config),
+            UpscaleRequest(input_path=backend_input, model=model, config=config),
             progress_callback=progress_callback,
         )
         try:
+            if size_plan.requires_final_resize:
+                if progress_callback is not None:
+                    progress_callback("正在调整最终尺寸", 0.88)
+                output_image = _resize_output_image(output_image, size_plan.final_output_size)
             if progress_callback is not None:
                 progress_callback("正在写入输出文件", 0.92)
             _save_image(output_image, output_path, output_format, quality)
@@ -340,7 +451,10 @@ def run_upscale(
             input_filename=original_name,
             input_path=stored_input,
             input_dimensions=(upload.width, upload.height) if upload else None,
+            output_dimensions=size_plan.final_output_size if size_plan else None,
             output_path=output_path,
+            output_size_preset=size_plan.preset if size_plan else output_size_preset,
+            target_longest_side=size_plan.target_longest_side if size_plan else None,
             error_code=exc.code,
             error_detail=exc.detail,
         )
@@ -366,11 +480,16 @@ def run_upscale(
             input_filename=original_name,
             input_path=stored_input,
             input_dimensions=(upload.width, upload.height) if upload else None,
+            output_dimensions=size_plan.final_output_size if size_plan else None,
             output_path=output_path,
+            output_size_preset=size_plan.preset if size_plan else output_size_preset,
+            target_longest_side=size_plan.target_longest_side if size_plan else None,
             error_code=wrapped.code,
             error_detail=f"{wrapped.detail} | {exc}",
         )
         raise wrapped from exc
+    finally:
+        _unlink_if_exists(prepared_input)
 
     log_event(
         config,
@@ -381,7 +500,10 @@ def run_upscale(
         input_filename=original_name,
         input_path=stored_input,
         input_dimensions=(upload.width, upload.height),
+        output_dimensions=output_size,
         output_path=output_path,
+        output_size_preset=size_plan.preset if size_plan else output_size_preset,
+        target_longest_side=size_plan.target_longest_side if size_plan else None,
         elapsed_seconds=elapsed,
     )
     if progress_callback is not None:
@@ -393,5 +515,7 @@ def run_upscale(
         output_size=output_size,
         model_name=model.display_name_zh or model.display_name,
         elapsed_seconds=elapsed,
+        output_size_preset=size_plan.preset if size_plan else output_size_preset,
+        target_longest_side=size_plan.target_longest_side if size_plan else None,
         request_id=request_token,
     )

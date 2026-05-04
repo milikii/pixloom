@@ -1,13 +1,14 @@
 # Frontend Development Guidelines
 
-> Frontend conventions for the current Pixloom Gradio UI.
+> Frontend conventions for the current Pixloom React/Next.js operator UI.
 
 ---
 
 ## Overview
 
-Pixloom frontend work currently means editing the Gradio UI in `app/app.py` and the
-metadata that feeds it. There is no standalone JS client in v1.
+Pixloom frontend work means editing the React/Next.js SPA under `frontend/`. The
+production Docker image statically exports the SPA and serves it from FastAPI on
+the same `7860` origin as `/api/*`.
 
 ---
 
@@ -15,9 +16,9 @@ metadata that feeds it. There is no standalone JS client in v1.
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Where frontend-facing Python code lives | Filled |
-| [Component Guidelines](./component-guidelines.md) | Gradio layout and text rules | Filled |
-| [Hook Guidelines](./hook-guidelines.md) | Callback-based stateful logic | Filled |
+| [Directory Structure](./directory-structure.md) | React/FastAPI frontend ownership | Filled |
+| [Component Guidelines](./component-guidelines.md) | React component and UI text rules | Filled |
+| [Hook Guidelines](./hook-guidelines.md) | React Query and client state rules | Filled |
 | [State Management](./state-management.md) | Local state and request flow rules | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | UX and testing quality bar | Filled |
 | [Type Safety](./type-safety.md) | Python contract and validation rules | Filled |

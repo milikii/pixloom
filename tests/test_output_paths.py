@@ -56,6 +56,21 @@ def test_build_output_path_is_safe_and_descriptive(tmp_path):
     assert "Summer-Photo" in output_path.name
 
 
+def test_build_output_path_includes_target_size_preset(tmp_path):
+    config = AppConfig(output_dir=tmp_path / "output")
+    config.ensure_directories()
+
+    output_path = build_output_path(
+        config=config,
+        model=_model(),
+        original_name="sample.png",
+        output_format="PNG",
+        output_size_preset="4k",
+    )
+
+    assert output_path.name.endswith("_4x_4k.png")
+
+
 def test_saved_output_can_be_written(tmp_path):
     config = AppConfig(output_dir=tmp_path / "output")
     config.ensure_directories()

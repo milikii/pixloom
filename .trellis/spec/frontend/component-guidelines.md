@@ -6,36 +6,13 @@
 
 ## Overview
 
-Pixloom has two frontends:
-
-- **V1 Gradio UI** (`app/app.py`): a "component" is a Gradio block or formatting helper.
-- **V2 React SPA** (`frontend/`): standard React/Next.js component model with Tailwind CSS v4.
-
-Both share the same backend contracts (model metadata, task records, request logging).
+Pixloom uses a React/Next.js SPA in `frontend/` with Tailwind CSS v4. Components
+consume FastAPI contracts for model metadata, task records, file URLs, and request
+logs.
 
 ---
 
-## V1 Gradio Component Pattern
-
-1. intro copy
-2. input controls column
-3. result and task-list column
-4. pure helper functions for rendering text
-
-Keep `build_demo()` organized as:
-
-- top-level page heading
-- short operator guidance
-- one row with two columns
-- left side for multi-file input and action
-- right side for preview, download, status, request logs, task selector, task list,
-  and completed-output thumbnails
-
-Examples: `app/app.py`
-
----
-
-## V2 React Component Rules
+## React Component Rules
 
 ### File Organization
 
@@ -91,6 +68,8 @@ Examples: `app/app.py`
 - Status and error boxes should include request id when relevant.
 - Task list must show status labels for queued/running/completed/failed/deleted/
   interrupted rows.
+- Output size presets are operator-facing artifact settings. Show them as Chinese
+  labels such as `原始模型倍率` or `4K 最长边 4096px`, not raw API values.
 
 ---
 

@@ -22,8 +22,8 @@ export const zh = {
     },
     output: {
       eyebrow: "输出",
-      title: "保存参数",
-      copy: "这里只保留格式和质量两个高频控制，减少手机端来回滚动。",
+      title: "输出尺寸与保存",
+      copy: "先选最终最长边，再选保存格式。原始模式会按模型自己的倍率输出。",
     },
     receipt: {
       eyebrow: "回执",

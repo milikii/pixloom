@@ -9,8 +9,8 @@
 Pixloom uses a small explicit error contract. Backend code should raise
 `InferenceError` with structured fields instead of raw strings.
 
-The current contract lives in `app/inference.py` and is rendered for operators in
-`app/app.py`.
+The current contract lives in `app/inference.py`, is persisted into task/log state
+by the worker, and is exposed to operators through FastAPI task/log responses.
 
 ---
 
@@ -44,7 +44,8 @@ Examples:
 
 - Validate early in `app/inference.py`.
 - Raise `InferenceError` with a stable code and Chinese operator-facing text.
-- Let `app/app.py` format the final status text with request id included.
+- Let FastAPI task/log endpoints expose stable error fields with the request id
+  included.
 - Wrap unexpected backend exceptions into `InferenceError` before returning to the
   UI boundary.
 
@@ -61,29 +62,28 @@ Backend layer:
 - cleans up partial files
 - rejects evaluation-only models at the worker boundary via `resolve_model()`
 
-UI layer:
+API/UI layer:
 
-- converts `InferenceError` to a readable Chinese multiline status block
-- logs UI-side rejections such as missing image or unavailable model
-- filters model dropdown to operator-visible models via `list_available_models()`
+- returns task records with `error_code`, `error_detail`, and `request_id`
+- rejects missing image or unavailable model before enqueue when possible
+- filters model dropdown through `/api/models`, backed by `list_available_models()`
 
 Relevant files:
 
 - `app/inference.py`
 - `app/model_registry.py`
-- `app/app.py`
+- `backend/worker/daemon.py`
+- `backend/pixloom_api/routers/`
 
 Current examples:
 
 - `app/inference.py`: `_validate_image_file`, `_validate_output_size`,
   `_ensure_backend_supported`, and `run_upscale` raise or wrap `InferenceError`
   with stable codes and Chinese next steps.
-- `app/app.py`: `format_error_message`, `_ui_error`, `handle_upscale`, and
-  `handle_batch_upscale` render failures with request ids instead of raw
-  exception strings.
-- `tests/test_inference_validation.py` and `tests/test_app_handler.py`: cover
-  validation failures, backend failures, missing-model UI rejection, and request
-  id propagation.
+- `backend/worker/daemon.py`: converts expected and unexpected task failures into
+  failed task rows with stable error codes.
+- `tests/test_inference_validation.py` and `tests/test_api.py`: cover validation
+  failures, backend-facing contracts, model visibility, and request id propagation.
 
 ---
 

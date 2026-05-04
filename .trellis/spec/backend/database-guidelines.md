@@ -55,10 +55,11 @@ Current examples:
 
 Current tables:
 
-- `batches(id, created_at, model_id, output_format, quality, total_count)`
+- `batches(id, created_at, model_id, output_format, quality,
+  output_size_preset, total_count)`
 - `tasks(request_id, batch_id, status, input_filename, input_path, output_path,
-  model_id, output_format, quality, created_at, started_at, completed_at,
-  elapsed_seconds, error_code, error_detail, retry_of_request_id)`
+  model_id, output_format, quality, output_size_preset, created_at, started_at,
+  completed_at, elapsed_seconds, error_code, error_detail, retry_of_request_id)`
 
 Allowed task statuses:
 
@@ -71,6 +72,9 @@ Allowed task statuses:
 
 `request_id` remains the per-image trace id. `batch_id` groups related uploads,
 including the one-image batch used by the current single-image flow.
+
+`output_size_preset` must be persisted on both the batch and task rows. Allowed
+values are `native`, `2k`, `4k`, and `8k`; old rows default to `native`.
 
 ---
 
@@ -86,8 +90,8 @@ deletes, retries, or displays queued upscale work.
 - `AppConfig.db_path: Path`
 - `load_config()` reads `PIXLOOM_DB_PATH`, default `state/pixloom.sqlite3`
 - `initialize_task_store(config: AppConfig) -> None`
-- `create_batch(config, *, batch_id, model_id, output_format, quality, total_count) -> BatchRecord`
-- `enqueue_task(config, *, request_id, batch_id, input_filename, input_path, model_id, output_format, quality, retry_of_request_id="") -> TaskRecord`
+- `create_batch(config, *, batch_id, model_id, output_format, quality, output_size_preset="native", total_count) -> BatchRecord`
+- `enqueue_task(config, *, request_id, batch_id, input_filename, input_path, model_id, output_format, quality, output_size_preset="native", retry_of_request_id="") -> TaskRecord`
 - `claim_next_queued_task(config) -> TaskRecord | None`
 - `claim_queued_task(config, request_id: str) -> TaskRecord | None`
 - `mark_task_completed(config, *, request_id, output_path, elapsed_seconds) -> TaskRecord`
@@ -100,6 +104,8 @@ deletes, retries, or displays queued upscale work.
 ### 3. Contracts
 
 - A task row must reference an existing batch row.
+- Task rows must carry the same output size preset requested for their batch unless
+  a future retry flow deliberately overrides it.
 - Uploaded files must be persisted under `input/` before enqueueing so queued work
   can survive browser disconnects.
 - Claiming a task changes only `queued -> running` inside a `BEGIN IMMEDIATE`
