@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import sys
 import threading
-import time
-from pathlib import Path
+import traceback
 
 from app.config import AppConfig
 from app.inference import run_upscale, BackendRunner
@@ -40,16 +40,15 @@ class BackgroundTaskWorker:
             self._thread.join(timeout=timeout)
 
     def _run(self) -> None:
-        import sys
         def _log(msg):
             print(f"[pixloom-worker] {msg}", file=sys.stderr, flush=True)
+
         _log("thread started")
         try:
             registry = get_default_registry()
             _log(f"registry loaded ({len(registry)} models)")
         except Exception as exc:
             _log(f"FATAL registry: {exc}")
-            import traceback
             traceback.print_exc(file=sys.stderr)
             return
         runner = BackendRunner()
@@ -72,11 +71,11 @@ class BackgroundTaskWorker:
                 self._process_task(task, registry, runner)
             except Exception as exc:
                 _log(f"CRASH processing task: {exc}")
-                tb.print_exc()
+                traceback.print_exc(file=sys.stderr)
                 try:
                     mark_task_failed(
                         self._config,
-                        task.request_id,
+                        request_id=task.request_id,
                         error_code="WORKER_CRASH",
                         error_detail=str(exc),
                     )
@@ -86,7 +85,12 @@ class BackgroundTaskWorker:
     def _process_task(self, task, registry, runner) -> None:
         def on_progress(step: str, value: float) -> None:
             try:
-                update_task_progress(self._config, task.request_id, step, value)
+                update_task_progress(
+                    self._config,
+                    request_id=task.request_id,
+                    progress_step=step,
+                    progress_value=value,
+                )
             except Exception:
                 pass
 
@@ -101,7 +105,7 @@ class BackgroundTaskWorker:
         except ModelNotFoundError as exc:
             mark_task_failed(
                 self._config,
-                task.request_id,
+                request_id=task.request_id,
                 error_code="MODEL_NOT_FOUND",
                 error_detail=str(exc),
             )
@@ -124,7 +128,6 @@ class BackgroundTaskWorker:
                 keep_input_on_failure=True,
             )
         except Exception as exc:
-            import sys, traceback
             code = getattr(exc, "code", "INFERENCE_FAILED")
             detail = f"{exc.__class__.__name__}: {exc}"
             if exc.__cause__:
@@ -133,7 +136,7 @@ class BackgroundTaskWorker:
             traceback.print_exc(file=sys.stderr)
             mark_task_failed(
                 self._config,
-                task.request_id,
+                request_id=task.request_id,
                 error_code=code,
                 error_detail=detail,
             )

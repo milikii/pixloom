@@ -27,9 +27,9 @@ def test_build_model_inventory_marks_operator_and_evaluation_files(tmp_path):
     assert by_name[general.name].operator_visible is True
     assert by_name[remacri.name].operator_visible is True
     assert by_name[remacri.name].exposure == "operator"
-    assert by_name[span.name].operator_visible is False
-    assert by_name[span.name].exposure == "evaluation"
-    assert by_name[span.name].stability_zh == "未启用"
+    assert by_name[span.name].operator_visible is True
+    assert by_name[span.name].exposure == "operator"
+    assert by_name[span.name].stability_zh == "已本机验收"
     assert by_name[untracked.name].operator_visible is False
     assert by_name[untracked.name].exposure == "untracked"
     assert by_name[untracked.name].stability_zh == "未登记"
