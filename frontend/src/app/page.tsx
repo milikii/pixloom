@@ -13,7 +13,7 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { useModels } from "@/hooks/useModels";
 import { useTasks, useTaskDelete, useRequestLog } from "@/hooks/useTasks";
 import { useFileUpload, useSubmitBatch } from "@/hooks/useSubmitBatch";
-import type { TaskRecord, ResolvedModel } from "@/lib/types";
+import type { TaskRecord, ResolvedModel, OutputSizePreset } from "@/lib/types";
 import { zh } from "@/i18n/zh";
 
 export default function HomePage() {
@@ -21,6 +21,8 @@ export default function HomePage() {
   const [modelId, setModelId] = useState<string | null>(null);
   const [outputFormat, setOutputFormat] = useState("PNG");
   const [quality, setQuality] = useState(90);
+  const [outputSizePreset, setOutputSizePreset] =
+    useState<OutputSizePreset>("native");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState("");
 
@@ -52,6 +54,7 @@ export default function HomePage() {
         model_id: modelId,
         output_format: outputFormat,
         quality,
+        output_size_preset: outputSizePreset,
       });
       setSelectedTaskId(batchResult.first_request_id);
       setSelectedFiles([]);
@@ -60,7 +63,15 @@ export default function HomePage() {
         err instanceof Error ? err.message : zh.toast.submitFailed
       );
     }
-  }, [selectedFiles, modelId, outputFormat, quality, fileUpload, submitBatch]);
+  }, [
+    selectedFiles,
+    modelId,
+    outputFormat,
+    quality,
+    outputSizePreset,
+    fileUpload,
+    submitBatch,
+  ]);
 
   const handleDelete = useCallback(() => {
     if (!selectedTaskId) return;
@@ -82,9 +93,9 @@ export default function HomePage() {
         rightSlot={<ThemeToggle variant="header" />}
       />
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[5fr_6fr]">
+      <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-[5fr_6fr]">
         {/* LEFT: Submission */}
-                <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
+        <div className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
           <PanelHead
             eyebrow={zh.panels.input.eyebrow}
             title={zh.panels.input.title}
@@ -122,8 +133,10 @@ export default function HomePage() {
           <OutputParams
             format={outputFormat}
             quality={quality}
+            outputSizePreset={outputSizePreset}
             onFormatChange={setOutputFormat}
             onQualityChange={setQuality}
+            onOutputSizePresetChange={setOutputSizePreset}
           />
 
           {submitError && (
@@ -140,7 +153,7 @@ export default function HomePage() {
         </div>
 
         {/* RIGHT: Tasks + Preview */}
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
+        <div className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-px hover:shadow-card-hover sm:rounded-2xl sm:p-5">
           <TaskPanel
             tasks={tasks}
             selectedTask={selectedTask}

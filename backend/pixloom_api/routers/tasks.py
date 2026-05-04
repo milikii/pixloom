@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from app.config import AppConfig
+from app.output_size import output_size_label_zh
 from app.tasks import delete_task, get_task, list_tasks
 from app.history import cleanup_expired_history
 from backend.pixloom_api.deps import get_config
@@ -60,6 +61,8 @@ def _task_to_dict(task) -> dict:
         "model_id": task.model_id,
         "output_format": task.output_format,
         "quality": task.quality,
+        "output_size_preset": task.output_size_preset,
+        "output_size_label": output_size_label_zh(task.output_size_preset),
         "created_at": task.created_at.isoformat(),
         "started_at": task.started_at.isoformat() if task.started_at else None,
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,

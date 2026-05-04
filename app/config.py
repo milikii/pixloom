@@ -17,9 +17,6 @@ class AppConfig:
     max_upload_bytes: int = 25 * 1024 * 1024
     tile_size: int = 256
     tile_overlap: int = 16
-    server_name: str = "0.0.0.0"
-    server_port: int = 7860
-    gradio_auth: tuple[str, str] | None = None
     history_limit: int = 60
     history_retention_days: int = 0
 
@@ -55,16 +52,6 @@ def _env_non_negative_int(name: str, default: int) -> int:
     return value
 
 
-def _load_gradio_auth() -> tuple[str, str] | None:
-    username = os.environ.get("GRADIO_AUTH_USER", "").strip()
-    password = os.environ.get("GRADIO_AUTH_PASS", "")
-    if not username and not password:
-        return None
-    if not username or not password:
-        raise ValueError("GRADIO_AUTH_USER and GRADIO_AUTH_PASS must be set together")
-    return (username, password)
-
-
 def load_config() -> AppConfig:
     return AppConfig(
         models_dir=_env_path("PIXLOOM_MODELS_DIR", "models"),
@@ -77,9 +64,6 @@ def load_config() -> AppConfig:
         max_upload_bytes=_env_int("PIXLOOM_MAX_UPLOAD_BYTES", 25 * 1024 * 1024),
         tile_size=_env_int("PIXLOOM_TILE_SIZE", 256),
         tile_overlap=_env_non_negative_int("PIXLOOM_TILE_OVERLAP", 16),
-        server_name=os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"),
-        server_port=_env_int("GRADIO_SERVER_PORT", 7860),
-        gradio_auth=_load_gradio_auth(),
         history_limit=_env_int("PIXLOOM_HISTORY_LIMIT", 60),
         history_retention_days=_env_non_negative_int(
             "PIXLOOM_HISTORY_RETENTION_DAYS", 0

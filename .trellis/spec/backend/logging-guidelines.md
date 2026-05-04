@@ -6,7 +6,7 @@
 
 ## Overview
 
-Pixloom v1 uses lightweight append-only JSONL logs under `logs/`.
+Pixloom uses lightweight append-only JSONL logs under `logs/`.
 
 The logging entrypoint is `app/request_logging.py`. The backend and UI should both
 log through `log_event(...)` so every request can be traced by `request_id`.
@@ -33,6 +33,10 @@ When known, also include:
 
 - `input_dimensions.width`
 - `input_dimensions.height`
+- `output_dimensions.width`
+- `output_dimensions.height`
+- `output_size_preset`
+- `target_longest_side`
 
 ---
 
@@ -67,16 +71,16 @@ These event names should stay explicit and boring. Do not invent vague names lik
 - one row when the request fails
 - one row when the SQLite task is marked failed
 - one row when an operator deletes a SQLite task
-- one row when the UI rejects a request before inference starts
+- one row when the API or UI boundary rejects a request before inference starts
 - one row when an operator deletes a history item
 - one row when retention cleanup prunes an old history item
 
 Examples live in:
 
 - `app/request_logging.py`
-- call sites in `app/app.py`
 - call sites in `app/inference.py`
 - call sites in `app/history.py`
+- call sites in `app/tasks.py`
 
 ---
 

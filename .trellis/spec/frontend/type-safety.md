@@ -6,8 +6,10 @@
 
 ## Overview
 
-Pixloom frontend-facing code is Python, not TypeScript. Type safety comes from:
+Pixloom frontend-facing code is TypeScript in `frontend/` plus typed Python
+contracts behind FastAPI. Type safety comes from:
 
+- TypeScript interfaces in `frontend/src/lib/types.ts`
 - dataclasses
 - type annotations
 - `Protocol`
@@ -21,14 +23,16 @@ Pixloom frontend-facing code is Python, not TypeScript. Type safety comes from:
 - `ResolvedModel` defines UI-visible model metadata
 - `UpscaleResult` defines the success payload returned to the UI
 - `InferenceError` defines the structured failure payload rendered to operators
+- `frontend/src/lib/types.ts` mirrors FastAPI response schemas used by the SPA
 
 Examples:
 
+- `frontend/src/lib/types.ts`
 - `app/config.py`
 - `app/model_registry.py`
 - `app/inference.py`
 - `app/tasks.py`
-- `app/app.py`
+- `backend/pixloom_api/routers/`
 
 Current examples:
 

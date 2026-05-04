@@ -107,13 +107,15 @@ def test_resolve_model_returns_promoted_spandrel_model(tmp_path):
     assert model.backend == "spandrel"
 
 
-def test_resolve_model_rejects_enabled_evaluation_model(tmp_path):
+def test_resolve_model_returns_onnx_model_when_operator_visible(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "APISR_4x_int8.onnx").write_bytes(b"fake")
 
-    with pytest.raises(ModelNotFoundError, match="Model is not operator-visible"):
-        resolve_model("apisr-4x-int8", models_dir, get_default_registry())
+    model = resolve_model("apisr-4x-int8", models_dir, get_default_registry())
+
+    assert model.backend == "onnxruntime"
+    assert model.architecture == "APISR"
 
 
 def test_registry_functions_honor_explicit_empty_registry(tmp_path):
@@ -127,7 +129,7 @@ def test_registry_functions_honor_explicit_empty_registry(tmp_path):
         resolve_model("realesrgan-x4plus", models_dir, ())
 
 
-def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path):
+def test_list_available_models_includes_newly_supported_backends(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "4x_foolhardy_Remacri.pth").write_bytes(b"fake")
@@ -138,6 +140,7 @@ def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path)
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
     (models_dir / "APISR_4x_int8.onnx").write_bytes(b"fake")
     (models_dir / "codeformer.pth").write_bytes(b"fake")
+    (models_dir / "GFPGANv1.4.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -148,4 +151,7 @@ def test_list_available_models_hides_evaluation_only_models_by_default(tmp_path)
         "realesrgan-x4plus-anime",
         "realesr-general-x4v3",
         "span-4x",
+        "apisr-4x-int8",
+        "codeformer",
+        "gfpgan-v14",
     ]

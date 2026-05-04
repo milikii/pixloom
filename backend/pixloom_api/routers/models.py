@@ -8,9 +8,7 @@ from app.config import AppConfig
 from app.model_registry import (
     list_available_models,
     list_installed_models,
-    resolve_model,
 )
-from app.app import format_model_guidance
 from backend.pixloom_api.deps import get_config
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -44,18 +42,3 @@ def get_models(config: AppConfig = Depends(get_config)):
         ],
         "hidden_count": hidden,
     }
-
-
-@router.get("/{model_id}/guidance")
-def get_model_guidance(model_id: str, config: AppConfig = Depends(get_config)):
-    installed = list_installed_models(config.models_dir)
-    operator = list_available_models(config.models_dir)
-    hidden = max(0, len(installed) - len(operator))
-
-    guidance = format_model_guidance(
-        model_id,
-        operator,
-        has_local_models=bool(installed),
-        hidden_local_models_count=hidden,
-    )
-    return {"model_id": model_id, "guidance_markdown": guidance}

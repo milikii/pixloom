@@ -1,6 +1,6 @@
 # Quality Guidelines
 
-> Frontend quality rules for the current Gradio UI.
+> Frontend quality rules for the current React UI.
 
 ---
 
@@ -9,8 +9,8 @@
 - Chinese-first operator-facing copy
 - Visible model guidance before the primary action
 - Actionable failure text with request id
-- Deterministic formatter helpers instead of inline repeated strings
-- Tests for success status, failure formatting, and model guidance text
+- Deterministic formatter helpers instead of inline repeated formatting
+- Tests for API contracts, model visibility, task listing, and failure paths
 - Thumbnail history for successful outputs with clear delete behavior
 
 ---
@@ -27,11 +27,11 @@
 
 ## Testing Requirements
 
-- `tests/test_app_handler.py` must cover:
-  - success status formatting
-  - known failure formatting
-  - unexpected runtime failure formatting
-  - model guidance content
+- `tests/test_api.py` must cover:
+  - model list response shape
+  - batch enqueue response shape
+  - task list response shape
+  - static frontend mount when a build export exists
 - History-related backend tests must cover listing, selection data, deletion, and
   retention cleanup.
 - UI-related contract changes should not ship without test updates.
@@ -40,15 +40,9 @@
 
 ## Current Examples
 
-- `app/app.py`: `format_status`, `format_error_message`, and
-  `format_model_guidance` keep critical operator copy Chinese-first and include
-  request ids when a run succeeds or fails.
-- `app/app.py`: `_task_list_text`, `_task_detail`, `_task_gallery`, and
-  `_task_summary` expose completed, failed, interrupted, deleted, queued, and
-  running task states without hiding failures behind thumbnails.
-- `tests/test_app_handler.py`: covers Chinese status formatting, failure
-  formatting, unavailable model handling, model guidance, batch task behavior, and
-  SQLite task visibility from the UI handler boundary.
+- `frontend/src/i18n/zh.ts`: central Chinese-first visible copy.
+- `frontend/src/components/tasks/StatusBadge.tsx`: status icon/color/text contract.
+- `tests/test_api.py`: covers FastAPI model/task contracts used by the SPA.
 
 ---
 

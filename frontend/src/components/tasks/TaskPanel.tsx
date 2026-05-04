@@ -211,7 +211,7 @@ export function TaskPanel({
                 {/* Task row */}
                 <button
                   onClick={() => handleSelect(t.request_id)}
-                  className="flex flex-1 items-center gap-2 py-1.5 pr-2 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2 text-left"
                 >
                   {/* Thumbnail */}
                   {thumb && t.status === "completed" ? (
@@ -249,7 +249,7 @@ export function TaskPanel({
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <StatusBadge status={t.status} />
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {formatTime(t.created_at)}
@@ -343,6 +343,14 @@ export function TaskPanel({
                   <span className="truncate text-foreground">{selectedTask.output_path ?? "—"}</span>
                   <span className="text-muted-foreground">模型</span>
                   <span className="text-foreground">{selectedTask.model_id}</span>
+                  <span className="text-muted-foreground">输出尺寸</span>
+                  <span className="text-foreground">
+                    {selectedTask.output_size_label || selectedTask.output_size_preset}
+                  </span>
+                  <span className="text-muted-foreground">保存格式</span>
+                  <span className="text-foreground">
+                    {selectedTask.output_format} · 质量 {selectedTask.quality}
+                  </span>
                   <span className="text-muted-foreground">耗时</span>
                   <span className="text-foreground">{formatElapsed(selectedTask.elapsed_seconds)}</span>
                   {selectedTask.error_code && (

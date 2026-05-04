@@ -40,6 +40,16 @@ export function TaskDetail({ task }: { task: TaskRecord }) {
         <span className="text-muted-foreground">模型</span>
         <span className="text-foreground">{task.model_id}</span>
 
+        <span className="text-muted-foreground">输出尺寸</span>
+        <span className="text-foreground">
+          {task.output_size_label || task.output_size_preset}
+        </span>
+
+        <span className="text-muted-foreground">保存格式</span>
+        <span className="text-foreground">
+          {task.output_format} · 质量 {task.quality}
+        </span>
+
         <span className="text-muted-foreground">阶段</span>
         <span className="text-foreground">
           {task.progress_step || "—"}

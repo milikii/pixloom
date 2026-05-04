@@ -1,8 +1,7 @@
 # Pixloom
 
-Pixloom is a self-hosted NAS image upscaling WebUI. It runs as a small Docker Compose service with CPU-only inference.
-
-The current v1 release uses a Gradio interface. A v2 React SPA + FastAPI backend is under development in `frontend/` and `backend/`.
+Pixloom is a self-hosted NAS image upscaling WebUI. It runs as one Docker Compose
+service with a React static frontend, a FastAPI backend, and CPU-only inference.
 
 The current release is intentionally narrow:
 
@@ -18,23 +17,23 @@ Current operator-facing behavior:
 
 - the main WebUI copy is Chinese-first
 - the model selector shows suitability guidance before inference starts
+- output size can stay at the model's native scale or target a 2K/4K/8K longest side
 - every upscale run gets a request id
 - single-image and batch runs are recorded in a SQLite task queue
 - the task list shows queued, running, completed, failed, deleted, and interrupted work
 - failures show operator guidance instead of a raw traceback
 - request events are appended as JSONL under `logs/`
-- a FastAPI backend (`backend/`) serves the same task/upload/model contracts for the v2 SPA
-- a React/Next.js SPA (`frontend/`) is under development with Gallery White design system
+- FastAPI serves `/api/*`, `/api/files/*`, the background worker, and the built
+  React/Next.js frontend from one container on port `7860`
 
 ## Directory Layout
 
 ```text
 .
+├── Dockerfile
+├── .dockerignore
 ├── compose.yml
 ├── app/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app.py
 │   ├── config.py
 │   ├── history.py
 │   ├── inference.py
@@ -111,9 +110,22 @@ Deleting a task removes only linked files that are safely under the configured
 `input/` and `output/` directories, marks the SQLite row as `deleted`, and appends
 a `task_deleted` audit event. Running tasks cannot be deleted.
 
+Each batch and task also stores `output_size_preset`. Current values are:
+
+```text
+native  -> original model scale
+2k      -> final longest side 2048px
+4k      -> final longest side 4096px
+8k      -> final longest side 8192px
+```
+
+Target presets preserve aspect ratio. They do not crop to a video frame and do not
+promise extra real detail beyond what the selected model can reconstruct.
+
 ## Model Files
 
-Pixloom v1 does not download models automatically. Place model files in `models/` with these names:
+Pixloom does not download models automatically. Place model files in `models/`
+with these names:
 
 ```text
 models/RealESRGAN_x4plus.pth
@@ -160,11 +172,6 @@ explicitly promoted. If local model files exist but none are yet accepted for da
 use, the UI shows a Chinese-first message explaining that the models are present but
 not yet opened to normal operators.
 
-The current FastAPI worker only implements the Spandrel backend. ONNX/custom
-weights such as APISR, CodeFormer, and GFPGAN may be installed locally for
-evaluation, but they stay hidden from the primary dropdown until their backend paths
-are implemented.
-
 The model guidance panel shows best fit, style, CPU speed class, local acceptance
 status, and a warning before the operator submits a task.
 
@@ -205,7 +212,7 @@ docker compose up -d
 ## View Logs
 
 ```bash
-docker compose logs -f --tail=120 upscale-webui
+docker compose logs -f --tail=120 pixloom
 ```
 
 Request-level audit logs are written under `logs/` as JSONL files. When a run fails,
@@ -232,7 +239,9 @@ and request-id lookup.
 Running tasks now persist progress stage and percentage into SQLite. The selected
 task view estimates remaining time from the current progress fraction and refreshes
 that estimate on the polling timer. On narrow screens, model guidance and output
-parameters are folded into accordions to keep the submission view shorter.
+save parameters are folded into accordions to keep the submission view shorter.
+Output size remains visible in the submission flow and in task detail because it
+changes the final artifact, not just the file encoding.
 
 Failed runs clean up output files created by that failed request when possible.
 Queue-backed failures keep the persisted input path in the task row so the failed
@@ -267,18 +276,6 @@ environment:
   PIXLOOM_HISTORY_RETENTION_DAYS: "0"
 ```
 
-## Optional Gradio Auth
-
-Pixloom can enable Gradio's built-in basic auth:
-
-```yaml
-environment:
-  GRADIO_AUTH_USER: "your-user"
-  GRADIO_AUTH_PASS: "your-password"
-```
-
-This is only a fallback for local or LAN-only use. Public access should still be protected at nginx or a unified authentication layer.
-
 ## nginx Reverse Proxy Example
 
 Host nginx should own HTTPS, public hostname, upload size limits, proxy timeout, and login.
@@ -310,11 +307,16 @@ Add Basic Auth, Authelia, OAuth2 Proxy, or the existing NAS login layer in nginx
 ## Tests
 
 ```bash
-docker run --rm -v "$PWD:/workspace" -w /workspace pixloom-upscale-webui python -m pytest -q
+.venv/bin/pytest -q
+cd frontend && npm run lint && npm run build
 ```
 
 The test suite uses fake models and generated tiny images. It does not require real
 model downloads.
+
+The Docker image installs CPU-only PyTorch wheels explicitly. Do not replace that
+with unconstrained `torch>=...` from the default PyPI index unless GPU/CUDA support
+becomes a deliberate product decision.
 
 ## Manual Acceptance Test
 

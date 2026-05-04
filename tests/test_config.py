@@ -18,10 +18,6 @@ def test_load_config_uses_defaults(monkeypatch):
     monkeypatch.delenv("PIXLOOM_MAX_UPLOAD_BYTES", raising=False)
     monkeypatch.delenv("PIXLOOM_TILE_SIZE", raising=False)
     monkeypatch.delenv("PIXLOOM_TILE_OVERLAP", raising=False)
-    monkeypatch.delenv("GRADIO_SERVER_NAME", raising=False)
-    monkeypatch.delenv("GRADIO_SERVER_PORT", raising=False)
-    monkeypatch.delenv("GRADIO_AUTH_USER", raising=False)
-    monkeypatch.delenv("GRADIO_AUTH_PASS", raising=False)
     monkeypatch.delenv("PIXLOOM_HISTORY_LIMIT", raising=False)
     monkeypatch.delenv("PIXLOOM_HISTORY_RETENTION_DAYS", raising=False)
 
@@ -37,9 +33,6 @@ def test_load_config_uses_defaults(monkeypatch):
     assert config.max_upload_bytes == 25 * 1024 * 1024
     assert config.tile_size == 256
     assert config.tile_overlap == 16
-    assert config.server_name == "0.0.0.0"
-    assert config.server_port == 7860
-    assert config.gradio_auth is None
     assert config.history_limit == 60
     assert config.history_retention_days == 0
 
@@ -55,10 +48,6 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("PIXLOOM_MAX_UPLOAD_BYTES", "1048576")
     monkeypatch.setenv("PIXLOOM_TILE_SIZE", "128")
     monkeypatch.setenv("PIXLOOM_TILE_OVERLAP", "8")
-    monkeypatch.setenv("GRADIO_SERVER_NAME", "127.0.0.1")
-    monkeypatch.setenv("GRADIO_SERVER_PORT", "9000")
-    monkeypatch.setenv("GRADIO_AUTH_USER", "alice")
-    monkeypatch.setenv("GRADIO_AUTH_PASS", "secret")
     monkeypatch.setenv("PIXLOOM_HISTORY_LIMIT", "20")
     monkeypatch.setenv("PIXLOOM_HISTORY_RETENTION_DAYS", "14")
 
@@ -74,9 +63,6 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     assert config.max_upload_bytes == 1048576
     assert config.tile_size == 128
     assert config.tile_overlap == 8
-    assert config.server_name == "127.0.0.1"
-    assert config.server_port == 9000
-    assert config.gradio_auth == ("alice", "secret")
     assert config.history_limit == 20
     assert config.history_retention_days == 14
 
@@ -105,21 +91,6 @@ def test_load_config_accepts_zero_tile_overlap(monkeypatch):
     config = load_config()
 
     assert config.tile_overlap == 0
-
-
-@pytest.mark.parametrize(
-    ("username", "password"),
-    [
-        ("alice", ""),
-        ("", "secret"),
-    ],
-)
-def test_load_config_rejects_partial_gradio_auth(monkeypatch, username, password):
-    monkeypatch.setenv("GRADIO_AUTH_USER", username)
-    monkeypatch.setenv("GRADIO_AUTH_PASS", password)
-
-    with pytest.raises(ValueError, match="must be set together"):
-        load_config()
 
 
 def test_load_config_rejects_negative_tile_overlap(monkeypatch):

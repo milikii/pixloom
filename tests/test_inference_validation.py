@@ -38,16 +38,24 @@ class SaveFailingBackend:
             )
 
 
-def _model(tmp_path: Path, backend: str = "spandrel") -> ResolvedModel:
-    model_path = tmp_path / "model.pth"
+def _model(
+    tmp_path: Path,
+    backend: str = "spandrel",
+    *,
+    architecture: str = "FakeSR",
+    scale: int = 4,
+    filename: str = "model.pth",
+    model_id: str = "fake-4x",
+) -> ResolvedModel:
+    model_path = tmp_path / filename
     model_path.write_bytes(b"fake")
     return ResolvedModel(
-        id="fake-4x",
+        id=model_id,
         display_name="Fake 4x",
         backend=backend,  # type: ignore[arg-type]
-        architecture="FakeSR",
-        scale=4,
-        path=Path("model.pth"),
+        architecture=architecture,
+        scale=scale,
+        path=Path(filename),
         absolute_path=model_path,
         image_types=("test",),
         notes="test",
@@ -167,6 +175,75 @@ def test_run_upscale_rejects_too_large_output(tmp_path, tiny_png):
         )
 
 
+def test_run_upscale_target_size_preset_writes_requested_longest_side(tmp_path, tiny_png):
+    config = _runtime_config(
+        tmp_path,
+        max_output_side=4096,
+    )
+
+    result = run_upscale(
+        image_path=tiny_png,
+        original_name="sample.png",
+        model=_model(tmp_path),
+        config=config,
+        output_format="PNG",
+        quality=90,
+        backend=FakeBackend(),
+        output_size_preset="2k",
+    )
+
+    assert result.output_size == (2048, 1536)
+    assert result.output_size_preset == "2k"
+    assert result.target_longest_side == 2048
+    assert "_2k." in result.output_path.name
+    assert not list(config.input_dir.glob("*prepared*"))
+
+    log_text = next(config.logs_dir.glob("pixloom-*.jsonl")).read_text(encoding="utf-8")
+    assert '"output_size_preset": "2k"' in log_text
+    assert '"target_longest_side": 2048' in log_text
+    assert '"output_dimensions": {"width": 2048, "height": 1536}' in log_text
+
+
+def test_run_upscale_rejects_target_preset_over_output_limit(tmp_path, tiny_png):
+    config = _runtime_config(
+        tmp_path,
+        max_output_side=1024,
+    )
+
+    with pytest.raises(InferenceError, match="exceeds the maximum output side"):
+        run_upscale(
+            image_path=tiny_png,
+            original_name="sample.png",
+            model=_model(tmp_path),
+            config=config,
+            output_format="PNG",
+            quality=90,
+            backend=FakeBackend(),
+            output_size_preset="2k",
+        )
+
+
+def test_run_upscale_cleans_prepared_input_when_backend_fails(tmp_path, tiny_png):
+    config = _runtime_config(
+        tmp_path,
+        max_output_side=4096,
+    )
+
+    with pytest.raises(InferenceError):
+        run_upscale(
+            image_path=tiny_png,
+            original_name="sample.png",
+            model=_model(tmp_path),
+            config=config,
+            output_format="PNG",
+            quality=90,
+            backend=FailingBackend(),
+            output_size_preset="2k",
+        )
+
+    assert not list(config.input_dir.glob("*prepared*"))
+
+
 def test_run_upscale_rejects_invalid_output_format_before_persisting_input(
     tmp_path, tiny_png
 ):
@@ -212,19 +289,34 @@ def test_run_upscale_maps_backend_failure_to_readable_error(tmp_path, tiny_png):
     assert exc.request_id in log_text
 
 
-def test_default_backend_runner_rejects_unimplemented_backend(tmp_path, tiny_png):
+def test_default_backend_runner_delegates_to_onnx_backend(monkeypatch, tmp_path, tiny_png):
+    from app import onnx_backend
+
+    class FakeOnnxBackend:
+        def upscale(self, request: UpscaleRequest):
+            with Image.open(request.input_path) as image:
+                return image.resize((image.width * 4, image.height * 4))
+
+    monkeypatch.setattr(onnx_backend, "OnnxRuntimeBackend", FakeOnnxBackend)
     config = _runtime_config(tmp_path)
 
-    with pytest.raises(InferenceError, match="Backend onnxruntime is not implemented"):
-        run_upscale(
-            image_path=tiny_png,
-            original_name="sample.png",
-            model=_model(tmp_path, backend="onnxruntime"),
-            config=config,
-            output_format="PNG",
-            quality=90,
-            backend=BackendRunner(),
-        )
+    result = run_upscale(
+        image_path=tiny_png,
+        original_name="sample.png",
+        model=_model(
+            tmp_path,
+            backend="onnxruntime",
+            architecture="APISR",
+            filename="model.onnx",
+            model_id="apisr-4x-int8",
+        ),
+        config=config,
+        output_format="PNG",
+        quality=90,
+        backend=BackendRunner(),
+    )
+
+    assert result.output_size == (32, 24)
 
 
 def test_default_backend_runner_delegates_to_spandrel_backend(monkeypatch, tmp_path, tiny_png):
@@ -250,6 +342,41 @@ def test_default_backend_runner_delegates_to_spandrel_backend(monkeypatch, tmp_p
     )
 
     assert result.output_size == (32, 24)
+
+
+def test_default_backend_runner_delegates_to_face_restoration_backend(monkeypatch, tmp_path, tiny_png):
+    from app import face_restoration_backend
+
+    class FakeFaceBackend:
+        def upscale(self, request: UpscaleRequest):
+            with Image.open(request.input_path) as image:
+                return image.copy()
+
+    monkeypatch.setattr(
+        face_restoration_backend,
+        "FaceRestorationBackend",
+        FakeFaceBackend,
+    )
+
+    config = _runtime_config(tmp_path)
+
+    result = run_upscale(
+        image_path=tiny_png,
+        original_name="sample.png",
+        model=_model(
+            tmp_path,
+            backend="custom",
+            architecture="CodeFormer",
+            scale=1,
+            model_id="codeformer",
+        ),
+        config=config,
+        output_format="PNG",
+        quality=90,
+        backend=BackendRunner(),
+    )
+
+    assert result.output_size == (8, 6)
 
 
 def test_run_upscale_rolls_back_files_when_save_fails(tmp_path, tiny_png, monkeypatch):

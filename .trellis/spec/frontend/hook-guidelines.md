@@ -1,61 +1,54 @@
 # Hook Guidelines
 
-> Stateful UI logic patterns in the current Gradio frontend.
+> Stateful UI logic patterns in the current React frontend.
 
 ---
 
 ## Overview
 
-Pixloom does not use React hooks. Current stateful UI behavior is implemented with
-small Python callbacks bound to Gradio events.
+Pixloom uses React hooks under `frontend/src/hooks/` for API data fetching and
+mutations. Server state goes through TanStack Query; durable task state remains in
+SQLite behind FastAPI.
 
 Examples:
 
-- `on_submit`
-- `on_model_change`
-- `on_task_refresh`
-- `on_task_select`
-- `on_task_delete`
-
-All current callbacks live in `app/app.py`.
+- `useModels`
+- `useTasks`
+- `useRequestLog`
+- `useFileUpload`
+- `useSubmitBatch`
 
 ---
 
 ## Current Pattern
 
-- Keep callback logic shallow.
-- Delegate real work to backend functions such as `run_upscale`.
-- Use pure helper functions for repeated formatting.
-- Pass explicit values into the callback; do not rely on hidden globals.
+- Keep hook logic shallow.
+- Delegate real work to FastAPI endpoints.
+- Use typed request/response shapes from `frontend/src/lib/types.ts`.
+- Invalidate or refetch task queries after mutations that change server state.
 
 ---
 
 ## Data Fetching
 
-There is no async client-side fetch layer in v1. Data flow is:
+Data flow is:
 
-Gradio input values -> Python callback -> backend function -> Gradio outputs
+React state -> API client -> FastAPI router -> SQLite/runtime module -> React Query
 
-Do not add polling, browser-side fetch wrappers, or custom JS hooks unless a task
-explicitly needs them.
+Keep API paths same-origin in production (`/api`). For local frontend development,
+use `NEXT_PUBLIC_API_BASE=http://localhost:8000/api` when the FastAPI server runs
+on port `8000`.
 
 ## Current Examples
 
-- `app/app.py`: `on_submit` delegates request handling to `handle_batch_upscale`
-  and then refreshes task gallery, state, choices, and summary from backend
-  storage.
-- `app/app.py`: `on_model_change` is a pure callback that returns
-  `format_model_guidance(model_id, models)`.
-- `app/app.py`: `on_task_select`, `on_task_refresh`, and `on_task_delete` re-read
-  task data through `get_task`, `list_tasks`, and `delete_task` instead of trusting
-  stale browser state.
-- `tests/test_app_handler.py`: exercises the callback-facing helpers through
-  `handle_upscale`, `handle_batch_upscale`, and `format_model_guidance`.
+- `frontend/src/hooks/useModels.ts`: fetches model metadata.
+- `frontend/src/hooks/useTasks.ts`: fetches tasks, request logs, and deletes tasks.
+- `frontend/src/hooks/useSubmitBatch.ts`: uploads files and creates task batches.
 
 ---
 
 ## Common Mistakes
 
-- building React-style abstractions in a Python Gradio app
-- putting backend orchestration directly into the UI layout body
-- duplicating formatting logic across callbacks instead of extracting a helper
+- duplicating fetch logic outside `frontend/src/lib/api-client.ts`
+- mutating durable task state only in browser memory
+- bypassing typed API shapes in `frontend/src/lib/types.ts`

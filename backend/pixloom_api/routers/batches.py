@@ -8,9 +8,14 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app.config import AppConfig
+from app.output_size import (
+    OUTPUT_SIZE_TARGETS,
+    NATIVE_OUTPUT_SIZE_PRESET,
+    normalize_output_size_preset,
+)
 from app.tasks import QueuedTaskInput, create_batch_with_tasks, build_batch_id
 from app.request_logging import build_request_id, read_request_log_excerpt
-from app.model_registry import list_available_models, ModelNotFoundError
+from app.model_registry import list_available_models
 from backend.pixloom_api.deps import get_config
 
 router = APIRouter(prefix="/batches", tags=["batches"])
@@ -21,12 +26,23 @@ class BatchCreateRequest(BaseModel):
     model_id: str
     output_format: str
     quality: int
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET
 
 
 @router.post("")
 def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_config)):
     if not body.stored_paths:
         return _batch_error("NO_IMAGE_SELECTED", "请先上传图片再开始放大。", "")
+
+    try:
+        output_size_preset = normalize_output_size_preset(body.output_size_preset)
+    except ValueError:
+        allowed = ", ".join(OUTPUT_SIZE_TARGETS)
+        return _batch_error(
+            "OUTPUT_SIZE_PRESET_INVALID",
+            f"输出尺寸无效。可选值：{allowed}。",
+            body.model_id,
+        )
 
     models = list_available_models(config.models_dir)
     selected = next((m for m in models if m.id == body.model_id), None)
@@ -48,6 +64,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
             model_id=body.model_id,
             output_format=body.output_format,
             quality=body.quality,
+            output_size_preset=output_size_preset,
         )
         for p in body.stored_paths
     )
@@ -59,6 +76,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
             model_id=body.model_id,
             output_format=body.output_format,
             quality=body.quality,
+            output_size_preset=output_size_preset,
             tasks=task_inputs,
         )
     except Exception as exc:
@@ -93,6 +111,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
                 "model_id": r.model_id,
                 "output_format": r.output_format,
                 "quality": r.quality,
+                "output_size_preset": r.output_size_preset,
                 "created_at": r.created_at.isoformat(),
                 "started_at": r.started_at.isoformat() if r.started_at else None,
                 "completed_at": r.completed_at.isoformat() if r.completed_at else None,

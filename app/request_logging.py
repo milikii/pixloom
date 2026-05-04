@@ -23,7 +23,10 @@ def log_event(
     input_filename: str | None = None,
     input_path: Path | None = None,
     input_dimensions: tuple[int, int] | None = None,
+    output_dimensions: tuple[int, int] | None = None,
     output_path: Path | None = None,
+    output_size_preset: str | None = None,
+    target_longest_side: int | None = None,
     elapsed_seconds: float | None = None,
     error_code: str | None = None,
     error_detail: str | None = None,
@@ -40,6 +43,8 @@ def log_event(
         "input_filename": input_filename or "",
         "input_path": str(input_path) if input_path else "",
         "output_path": str(output_path) if output_path else "",
+        "output_size_preset": output_size_preset or "",
+        "target_longest_side": target_longest_side,
         "elapsed_seconds": elapsed_seconds,
         "error_code": error_code or "",
         "error_detail": error_detail or "",
@@ -48,6 +53,11 @@ def log_event(
         payload["input_dimensions"] = {
             "width": input_dimensions[0],
             "height": input_dimensions[1],
+        }
+    if output_dimensions is not None:
+        payload["output_dimensions"] = {
+            "width": output_dimensions[0],
+            "height": output_dimensions[1],
         }
 
     with log_path.open("a", encoding="utf-8") as handle:

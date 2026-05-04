@@ -7,6 +7,10 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.config import AppConfig
+from app.output_size import (
+    NATIVE_OUTPUT_SIZE_PRESET,
+    normalize_output_size_preset,
+)
 from app.request_logging import log_event
 
 
@@ -27,6 +31,7 @@ class BatchRecord:
     model_id: str
     output_format: str
     quality: int
+    output_size_preset: str
     total_count: int
 
 
@@ -41,6 +46,7 @@ class TaskRecord:
     model_id: str
     output_format: str
     quality: int
+    output_size_preset: str
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
@@ -69,6 +75,7 @@ class QueuedTaskInput:
     model_id: str
     output_format: str
     quality: int
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET
     retry_of_request_id: str = ""
 
 
@@ -88,6 +95,7 @@ def initialize_task_store(config: AppConfig) -> None:
                 model_id TEXT NOT NULL,
                 output_format TEXT NOT NULL,
                 quality INTEGER NOT NULL,
+                output_size_preset TEXT NOT NULL DEFAULT 'native',
                 total_count INTEGER NOT NULL
             );
 
@@ -101,6 +109,7 @@ def initialize_task_store(config: AppConfig) -> None:
                 model_id TEXT NOT NULL,
                 output_format TEXT NOT NULL,
                 quality INTEGER NOT NULL,
+                output_size_preset TEXT NOT NULL DEFAULT 'native',
                 created_at TEXT NOT NULL,
                 started_at TEXT NOT NULL DEFAULT '',
                 completed_at TEXT NOT NULL DEFAULT '',
@@ -117,15 +126,29 @@ def initialize_task_store(config: AppConfig) -> None:
                 ON tasks(status, created_at);
             """
         )
-        _ensure_task_column(
+        _ensure_column(
             connection,
+            "tasks",
             "progress_value",
             "ALTER TABLE tasks ADD COLUMN progress_value REAL NOT NULL DEFAULT 0",
         )
-        _ensure_task_column(
+        _ensure_column(
             connection,
+            "tasks",
             "progress_step",
             "ALTER TABLE tasks ADD COLUMN progress_step TEXT NOT NULL DEFAULT ''",
+        )
+        _ensure_column(
+            connection,
+            "batches",
+            "output_size_preset",
+            "ALTER TABLE batches ADD COLUMN output_size_preset TEXT NOT NULL DEFAULT 'native'",
+        )
+        _ensure_column(
+            connection,
+            "tasks",
+            "output_size_preset",
+            "ALTER TABLE tasks ADD COLUMN output_size_preset TEXT NOT NULL DEFAULT 'native'",
         )
 
 
@@ -136,18 +159,29 @@ def create_batch(
     model_id: str,
     output_format: str,
     quality: int,
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET,
     total_count: int,
 ) -> BatchRecord:
     initialize_task_store(config)
     created_at = _now()
+    preset = normalize_output_size_preset(output_size_preset)
     with _connect(config) as connection:
         connection.execute(
             """
             INSERT INTO batches (
-                id, created_at, model_id, output_format, quality, total_count
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                id, created_at, model_id, output_format, quality,
+                output_size_preset, total_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (batch_id, created_at, model_id, output_format, int(quality), total_count),
+            (
+                batch_id,
+                created_at,
+                model_id,
+                output_format,
+                int(quality),
+                preset,
+                total_count,
+            ),
         )
     return BatchRecord(
         id=batch_id,
@@ -155,6 +189,7 @@ def create_batch(
         model_id=model_id,
         output_format=output_format,
         quality=int(quality),
+        output_size_preset=preset,
         total_count=total_count,
     )
 
@@ -169,17 +204,20 @@ def enqueue_task(
     model_id: str,
     output_format: str,
     quality: int,
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET,
     retry_of_request_id: str = "",
 ) -> TaskRecord:
     initialize_task_store(config)
     created_at = _now()
+    preset = normalize_output_size_preset(output_size_preset)
     with _connect(config) as connection:
         connection.execute(
             """
             INSERT INTO tasks (
                 request_id, batch_id, status, input_filename, input_path,
-                model_id, output_format, quality, created_at, retry_of_request_id
-            ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?)
+                model_id, output_format, quality, output_size_preset,
+                created_at, retry_of_request_id
+            ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 request_id,
@@ -189,6 +227,7 @@ def enqueue_task(
                 model_id,
                 output_format,
                 int(quality),
+                preset,
                 created_at,
                 retry_of_request_id,
             ),
@@ -201,6 +240,7 @@ def enqueue_task(
         model_id=model_id,
         input_filename=input_filename,
         input_path=input_path,
+        output_size_preset=preset,
     )
     task = get_task(config, request_id)
     if task is None:
@@ -215,11 +255,13 @@ def create_batch_with_tasks(
     model_id: str,
     output_format: str,
     quality: int,
+    output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET,
     tasks: tuple[QueuedTaskInput, ...],
 ) -> tuple[TaskRecord, ...]:
     initialize_task_store(config)
     batch_created_at = _now()
     task_created_at = _now()
+    preset = normalize_output_size_preset(output_size_preset)
 
     with _connect(config) as connection:
         connection.isolation_level = None
@@ -228,8 +270,9 @@ def create_batch_with_tasks(
             connection.execute(
                 """
                 INSERT INTO batches (
-                    id, created_at, model_id, output_format, quality, total_count
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    id, created_at, model_id, output_format, quality,
+                    output_size_preset, total_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     batch_id,
@@ -237,16 +280,19 @@ def create_batch_with_tasks(
                     model_id,
                     output_format,
                     int(quality),
+                    preset,
                     len(tasks),
                 ),
             )
             for task in tasks:
+                task_preset = normalize_output_size_preset(task.output_size_preset)
                 connection.execute(
                     """
                     INSERT INTO tasks (
                         request_id, batch_id, status, input_filename, input_path,
-                        model_id, output_format, quality, created_at, retry_of_request_id
-                    ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?)
+                        model_id, output_format, quality, output_size_preset,
+                        created_at, retry_of_request_id
+                    ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task.request_id,
@@ -256,6 +302,7 @@ def create_batch_with_tasks(
                         task.model_id,
                         task.output_format,
                         int(task.quality),
+                        task_preset,
                         task_created_at,
                         task.retry_of_request_id,
                     ),
@@ -279,6 +326,7 @@ def create_batch_with_tasks(
                 model_id=task.model_id,
                 input_filename=task.input_filename,
                 input_path=task.input_path,
+                output_size_preset=normalize_output_size_preset(task.output_size_preset),
             )
             record = get_task(config, task.request_id)
             if record is None:
@@ -391,6 +439,7 @@ def mark_task_completed(
         input_path=task.input_path,
         output_path=task.output_path,
         elapsed_seconds=task.elapsed_seconds,
+        output_size_preset=task.output_size_preset,
     )
     return task
 
@@ -420,6 +469,7 @@ def mark_task_failed(
         input_path=task.input_path,
         error_code=task.error_code,
         error_detail=task.error_detail,
+        output_size_preset=task.output_size_preset,
     )
     return task
 
@@ -511,6 +561,7 @@ def delete_task(config: AppConfig, request_id: str) -> TaskDeleteResult:
         input_filename=task.input_filename,
         input_path=task.input_path,
         output_path=task.output_path,
+        output_size_preset=task.output_size_preset,
     )
 
     deleted_text = "\n".join(str(path) for path in deleted_paths) or "没有实际删除文件。"
@@ -665,6 +716,7 @@ def _task_from_row(row: sqlite3.Row) -> TaskRecord:
         model_id=row["model_id"],
         output_format=row["output_format"],
         quality=int(row["quality"]),
+        output_size_preset=row["output_size_preset"] or NATIVE_OUTPUT_SIZE_PRESET,
         created_at=_parse_timestamp(row["created_at"]),
         started_at=_parse_optional_timestamp(row["started_at"]),
         completed_at=_parse_optional_timestamp(row["completed_at"]),
@@ -689,14 +741,15 @@ def _parse_optional_timestamp(value: str) -> datetime | None:
     return _parse_timestamp(value)
 
 
-def _ensure_task_column(
+def _ensure_column(
     connection: sqlite3.Connection,
+    table_name: str,
     column_name: str,
     alter_sql: str,
 ) -> None:
     columns = {
         row["name"]
-        for row in connection.execute("PRAGMA table_info(tasks)").fetchall()
+        for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
     }
     if column_name not in columns:
         connection.execute(alter_sql)

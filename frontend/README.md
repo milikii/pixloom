@@ -7,11 +7,11 @@ React/Next.js SPA for the Pixloom NAS CPU image upscale console.
 ```bash
 cd frontend
 npm install
+export NEXT_PUBLIC_API_BASE=http://localhost:8000/api
 npm run dev         # http://localhost:3000
 ```
 
-The dev server proxies `/api/*` to the FastAPI backend. Make sure the backend
-is running on `localhost:8000` before using the frontend:
+Make sure the backend is running on `localhost:8000` before using the frontend:
 
 ```bash
 cd ..  # project root
@@ -25,6 +25,12 @@ npm run build
 ```
 
 Static output lands in `out/`.
+
+## Production
+
+Production does not run a standalone Next server. The root `Dockerfile` builds the
+static export and FastAPI serves both the frontend and `/api/*` from one container
+on port `7860`.
 
 ## Stack
 

@@ -126,6 +126,7 @@ class BackgroundTaskWorker:
                 progress_callback=on_progress,
                 pre_persisted_input=True,
                 keep_input_on_failure=True,
+                output_size_preset=task.output_size_preset,
             )
         except Exception as exc:
             code = getattr(exc, "code", "INFERENCE_FAILED")

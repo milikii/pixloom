@@ -72,6 +72,7 @@ def test_enqueue_and_claim_task_transitions_to_running(tmp_path):
     claimed = claim_queued_task(config, "req-1")
 
     assert queued.status == "queued"
+    assert queued.output_size_preset == "native"
     assert claimed is not None
     assert claimed.status == "running"
     assert claimed.started_at is not None
@@ -391,6 +392,87 @@ def test_create_batch_with_tasks_is_atomic_on_failure(tmp_path):
         tasks_module._connect = original_connect
 
     assert list_tasks(config) == []
+
+
+def test_create_batch_with_tasks_persists_output_size_preset(tmp_path):
+    config = _config(tmp_path)
+    input_path = config.input_dir / "source.png"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path.write_bytes(b"fake")
+
+    records = create_batch_with_tasks(
+        config,
+        batch_id="batch-1",
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=90,
+        output_size_preset="4k",
+        tasks=(
+            QueuedTaskInput(
+                request_id="req-1",
+                input_filename="source.png",
+                input_path=input_path,
+                model_id="fake-4x",
+                output_format="PNG",
+                quality=90,
+                output_size_preset="4k",
+            ),
+        ),
+    )
+
+    assert records[0].output_size_preset == "4k"
+    assert list_tasks(config)[0].output_size_preset == "4k"
+
+
+def test_initialize_task_store_migrates_output_size_preset_columns(tmp_path):
+    config = _config(tmp_path)
+    config.db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(config.db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE batches (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                output_format TEXT NOT NULL,
+                quality INTEGER NOT NULL,
+                total_count INTEGER NOT NULL
+            );
+            CREATE TABLE tasks (
+                request_id TEXT PRIMARY KEY,
+                batch_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                input_filename TEXT NOT NULL,
+                input_path TEXT NOT NULL,
+                output_path TEXT NOT NULL DEFAULT '',
+                model_id TEXT NOT NULL,
+                output_format TEXT NOT NULL,
+                quality INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                started_at TEXT NOT NULL DEFAULT '',
+                completed_at TEXT NOT NULL DEFAULT '',
+                elapsed_seconds REAL,
+                progress_value REAL NOT NULL DEFAULT 0,
+                progress_step TEXT NOT NULL DEFAULT '',
+                error_code TEXT NOT NULL DEFAULT '',
+                error_detail TEXT NOT NULL DEFAULT '',
+                retry_of_request_id TEXT NOT NULL DEFAULT ''
+            );
+            """
+        )
+
+    initialize_task_store(config)
+
+    with sqlite3.connect(config.db_path) as connection:
+        batch_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(batches)")
+        }
+        task_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(tasks)")
+        }
+
+    assert "output_size_preset" in batch_columns
+    assert "output_size_preset" in task_columns
 
 
 def test_create_batch_with_tasks_rolls_back_when_queue_logging_fails(tmp_path, monkeypatch):
