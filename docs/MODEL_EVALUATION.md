@@ -1,6 +1,6 @@
 # Pixloom Model Evaluation
 
-Last updated: 2026-05-03
+Last updated: 2026-05-06
 
 Hardware target: Intel Core i7-8700, 6 cores / 12 threads, 32 GB RAM, 1 TB SSD,
 CPU-only Docker runtime.
@@ -48,20 +48,21 @@ As of 2026-05-01, the local `models/` directory currently contains:
 | File | Size | SHA256 | Current exposure |
 |---|---:|---|---|
 | `4x-UltraSharp.pth` | `66961958` bytes | `a5812231fc936b42af08a5edba784195495d303d5b3248c24489ef0c4021fe01` | operator-visible |
-| `4x_NMKD-Siax_200k.pth` | `66957746` bytes | `560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e` | evaluation-only |
+| `4x_NMKD-Siax_200k.pth` | `66957746` bytes | `560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e` | operator-visible |
 | `4x_foolhardy_Remacri.pth` | `67025055` bytes | `e1a73bd89c2da1ae494774746398689048b5a892bd9653e146713f9df8bca86a` | operator-visible |
-| `APISR_4x_int8.onnx` | `4717802` bytes | `fda363437f2391042c108a5342c01749c1e61287215c2529d67c1af8ea1f2e77` | evaluation-only |
-| `GFPGANv1.4.pth` | `348632874` bytes | `e2cd4703ab14f4d01fd1383a8a8b266f9a5833dacee8e6a79d3bf21a1b6be5ad` | evaluation-only |
-| `DAT2_4x_pretrain.pth` | `280595890` bytes | `5496991a002dba4ef2685bd94e5b3c17372504432eb9318ecac3d1fceb433dda` | evaluation-only |
+| `APISR_4x_int8.onnx` | `4717802` bytes | `fda363437f2391042c108a5342c01749c1e61287215c2529d67c1af8ea1f2e77` | operator-visible |
+| `GFPGANv1.4.pth` | `348632874` bytes | `e2cd4703ab14f4d01fd1383a8a8b266f9a5833dacee8e6a79d3bf21a1b6be5ad` | operator-visible |
+| `DAT2_4x_pretrain.pth` | `140333139` bytes | `05b5c17bb5d1939ec0ec6b9368368d82d8c45b80c134e370f798efec0aeec395` | evaluation-only |
+| `DRCT_X4.pth` | `245582817` bytes | `fe104903aa8fe897b85605a733c8c7907e40c02f066e53c6cbac2f3f0c838dd9` | operator-visible |
+| `DRCT-L_X4.pth` | `485570697` bytes | `a99044c0275699d1a296ae21b8f322fa8c65d7b9be2213ee2a3dcc280ab8d64b` | operator-visible |
 | `HAT-L-4x.pth` | `165774123` bytes | `5992bd38522f2b8faf11ea4bd8ee08de92465bb66892166576999afc36d60043` | operator-visible |
-| `OmniSR_4x_DF2K.pth` | `3050977` bytes | `e9e3aad63210e6cb133e7a315bd03cfe33ee978771713aa308106dc7889ae1a2` | evaluation-only |
-| `OmniSR_X4_DIV2K.safetensors` | `1697536` bytes | `dff25e4ed392cb5cbe534d920e292063a0555df9281c54c5ec321490a2a59832` | evaluation-only |
 | `RealESRGAN_x4plus.pth` | `67040989` bytes | `4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1` | operator-visible |
 | `RealESRGAN_x4plus_anime_6B.pth` | `17938799` bytes | `f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da` | operator-visible |
-| `RealPLKSR_4x.pth` | `29678402` bytes | `7d67b22f0c5b60f4167d94e89b7b56f74bdf994bb8fb199769b9d945c681a1ae` | evaluation-only (disabled) |
-| `SPAN_pretrain.pth` | `9016540` bytes | `234ac9facfdce987dab59ef6cd8129dd88903a16b6d34eeddd639b81f6695b18` | evaluation-only |
-| `codeformer.pth` | `376637898` bytes | `1009e537e0c2a07d4cabce6355f53cb66767cd4b4297ec7a4a64ca4b8a5684b7` | evaluation-only |
+| `RealPLKSR_4x.pth` | `29678402` bytes | `7d67b22f0c5b60f4167d94e89b7b56f74bdf994bb8fb199769b9d945c681a1ae` | operator-visible |
+| `SPAN_pretrain.pth` | `9016540` bytes | `234ac9facfdce987dab59ef6cd8129dd88903a16b6d34eeddd639b81f6695b18` | operator-visible |
+| `codeformer.pth` | `376637898` bytes | `1009e537e0c2a07d4cabce6355f53cb66767cd4b4297ec7a4a64ca4b8a5684b7` | operator-visible |
 | `realesr-general-x4v3.pth` | `4885111` bytes | `8dc7edb9ac80ccdc30c3a5dca6616509367f05fbc184ad95b731f05bece96292` | operator-visible |
+| `up2x-latest-denoise3x.pth` | `5147249` bytes | `0a14739f3f5fcbd74ec3ce2806d13a47916c916b20afe4a39d95f6df4ca6abd8` | operator-visible |
 | `up3x-latest-denoise3x.pth` | `5154161` bytes | `39f1e6e90d50e5528a63f4ba1866bad23365a737cbea22a80769b2ec4c1c3285` | operator-visible |
 
 If the accepted set is smaller than the ideal five-slot ordering, the primary
@@ -91,10 +92,11 @@ image. This is **not** the final quality acceptance pass. It only answers:
 | `span-4x` | `spandrel` | `ok` | `0.115s` | evaluate on real images before enabling |
 | `realplksr-4x` | `spandrel` | `ok` | `0.290s` | evaluate on real images before enabling |
 | `dat2-4x-pretrain` | `spandrel` | `ok` | `0.819s` | keep disabled; research/quality-ceiling testing only |
+| `drct-4x` | `spandrel` | `ok` | `2.661s` | add to slow quality-ceiling operator set beside HAT-L |
+| `drct-l-4x` | `spandrel` | `ok` | `1.013s` | keep visible with very-slow warning; use for upper-bound comparisons only |
 | `hat-l-4x` | `spandrel` | `ok` | `2.984s` | operator-visible opt-in; keep CPU-slow warning explicit |
-| `omnisr-4x-df2k` | `spandrel` | `error` | n/a | inspect compatibility/runtime issue before further use |
-| `omnisr-x4-div2k` | `spandrel` | `ok` | `0.078s` | prefer this weight over the failing DF2K file for future evaluation |
 | `apisr-4x-int8` | `onnxruntime` | `backend-not-implemented` | n/a | add ONNX path before evaluation |
+| `real-cugan-up2x-denoise3x` | `spandrel` | `ok` | `0.045s` | expose as the 2x anime precision option |
 | `real-cugan-up3x-denoise3x` | `spandrel` | `ok` | `0.061s` | operator-visible anime denoise specialist; remind users it is 3x, not 4x |
 | `codeformer` | `custom` | `backend-not-implemented` | n/a | add face-restoration path before evaluation |
 | `gfpgan-v14` | `custom` | `backend-not-implemented` | n/a | add face-restoration path before evaluation |

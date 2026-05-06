@@ -212,12 +212,15 @@ docker rm pixloom
 
 ### 照片高质量慢跑
 
+- `DRCT 4x` `★★★★☆`
 - `质量上限 - HAT-L 4x` `★★☆☆☆`
+- `DRCT-L 4x` `★★☆☆☆`
 
 ### 动漫/线稿
 
 - `APISR 4x` `★★★★★`
 - `动漫修复 - Real-CUGAN 3x 去噪` `★★★★★`
+- `动漫精修 - Real-CUGAN 2x 去噪` `★★★★☆`
 - `动漫插画 - Real-ESRGAN Anime 6B` `★★★★☆`
 
 ### 人脸修复
@@ -270,8 +273,8 @@ curl http://127.0.0.1:7860/api/health
 {
   "status": "ok",
   "runtime": "cpu-only",
-  "models_installed": 14,
-  "models_operator": 12
+  "models_installed": 17,
+  "models_operator": 16
 }
 ```
 
