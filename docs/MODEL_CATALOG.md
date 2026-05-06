@@ -19,6 +19,7 @@ Star meaning:
 | `span-4x` | yes | 照片主力 | `★★★★★` | `spandrel` | 4 | `SPAN 4x` |
 | `realplksr-4x` | yes | 照片主力 | `★★★★★` | `spandrel` | 4 | `RealPLKSR 4x` |
 | `4x-nmkd-siax-200k` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `照片修复 - 4x NMKD-Siax` |
+| `4x-ultrasharp` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `锐化插画 - 4x UltraSharp` |
 | `hat-l-4x` | yes | 照片高质量慢跑 | `★★☆☆☆` | `spandrel` | 4 | `质量上限 - HAT-L 4x` |
 | `apisr-4x-int8` | yes | 动漫/线稿 | `★★★★★` | `onnxruntime` | 4 | `APISR 4x` |
 | `real-cugan-up3x-denoise3x` | yes | 动漫/线稿 | `★★★★★` | `spandrel` | 3 | `动漫修复 - Real-CUGAN 3x 去噪` |
@@ -28,8 +29,7 @@ Star meaning:
 | `realesr-general-x4v3` | yes | 快速试跑 | `★★★☆☆` | `spandrel` | 4 | `快速试跑 - Real-ESRGAN General v3` |
 | `4x-remacri` | yes | 经典旧将 | `★★★★☆` | `spandrel` | 4 | `照片自然 - 4x Remacri` |
 | `realesrgan-x4plus` | yes | 经典旧将 | `★★★☆☆` | `spandrel` | 4 | `照片通用 - Real-ESRGAN 4x` |
-| `4x-ultrasharp` | yes | 经典旧将 | `★★★★☆` | `spandrel` | 4 | `锐化插画 - 4x UltraSharp` |
-| `dat2-4x-pretrain` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `DAT 4x` |
+| `dat2-4x-pretrain` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `DAT2 4x 预训练版` |
 | `omnisr-4x-df2k` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `OmniSR 4x DF2K` |
 | `omnisr-x4-div2k` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `OmniSR X4 DIV2K` |
 
@@ -78,6 +78,17 @@ Star meaning:
 - Best fit: 适合追求细节上限的照片和通用图片，但更适合少量慢跑任务。
 - Warning: CPU 推理明显更慢，不适合大批量或手机上频繁试错。
 - Sharp review: 🏆 多项超分基准测试霸榜的 Transformer 模型。能「理解」图像全局结构，修复极其模糊的边缘。代价：纯 CPU 慢到令人发指，只适合真爱。
+
+### `锐化插画 - 4x UltraSharp`
+
+- Visible: yes
+- Group: `照片主力`
+- Stars: `★★★★☆`
+- Backend: `spandrel`
+- Scale: `4`
+- Best fit: 适合 AI 图、插画、压缩网图，也适合想要更强锐度的风景和建筑照片。
+- Warning: 锐化更强，人物皮肤和近景小纹理可能偏硬；不适合想保留柔和自然感的照片。
+- Sharp review: 🏆 老牌强将，但不是退休干部。AI 插画、CG 和高反差风景放大依然很能打，日常使用频率完全配得上主力席位。
 
 ### `APISR 4x`
 
@@ -167,27 +178,16 @@ Star meaning:
 - Warning: 细节会更自然，但插画和线稿不一定最锐利。
 - Sharp review: Real-ESRGAN 官方出品，通用性最强的照片模型。对压缩图片的修复稳定，但细节上限不如 UltraSharp。适合不知道选什么时无脑选。
 
-### `锐化插画 - 4x UltraSharp`
-
-- Visible: yes
-- Group: `经典旧将`
-- Stars: `★★★★☆`
-- Backend: `spandrel`
-- Scale: `4`
-- Best fit: 适合 AI 图、插画、压缩网图和希望边缘更锐利的图片。
-- Warning: 锐化更强，真实照片可能出现偏硬或过锐的感觉。
-- Sharp review: 🏆 摄影圈公认的最强泛用模型之一。边缘锐利到可以割手，抗 JPEG 伪影能力一绝，极少产生 AI 塑料感。真实风景和人物摄影的无脑首选。
-
-### `DAT 4x`
+### `DAT2 4x 预训练版`
 
 - Visible: no
 - Group: `照片高质量慢跑`
 - Stars: `★☆☆☆☆`
 - Backend: `spandrel`
 - Scale: `4`
-- Best fit: 实验模型，适合少量高质量通用图像对比测试。
-- Warning: 参数体量巨大，1080p 到 4K 可能需 15 分钟以上。适合对时间不敏感的极限压榨任务。
-- Sharp review: 学术界的画质 SOTA 选手。Transformer 架构，参数量巨大，CPU 路线只适合研究型慢跑。
+- Best fit: 实验模型，只适合做少量对比测试，不适合作为 DAT 系列的正式画质代表。
+- Warning: 这是 pretrain 预训练权重，不是社区常用的 fine-tuned 成品版；画质判断容易失真，CPU 也非常慢。
+- Sharp review: 别把它当 DAT 正式代表。这个 pretrain 版更像研究样本，能跑不等于该拿来做结论；想认真评 DAT，得换成 fine-tuned 社区版。
 
 ### `OmniSR 4x DF2K`
 

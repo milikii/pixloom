@@ -15,6 +15,7 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
     models_dir.mkdir()
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
     (models_dir / "RealPLKSR_4x.pth").write_bytes(b"fake")
+    (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus_anime_6B.pth").write_bytes(b"fake")
 
@@ -23,6 +24,7 @@ def test_list_available_models_returns_enabled_models_with_existing_files(tmp_pa
     assert [model.id for model in available] == [
         "span-4x",
         "realplksr-4x",
+        "4x-ultrasharp",
         "realesrgan-x4plus-anime",
         "realesrgan-x4plus",
     ]
@@ -139,6 +141,7 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
     (models_dir / "SPAN_pretrain.pth").write_bytes(b"fake")
     (models_dir / "RealPLKSR_4x.pth").write_bytes(b"fake")
     (models_dir / "4x_NMKD-Siax_200k.pth").write_bytes(b"fake")
+    (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
     (models_dir / "HAT-L-4x.pth").write_bytes(b"fake")
     (models_dir / "up3x-latest-denoise3x.pth").write_bytes(b"fake")
@@ -154,6 +157,7 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
         "span-4x",
         "realplksr-4x",
         "4x-nmkd-siax-200k",
+        "4x-ultrasharp",
         "hat-l-4x",
         "apisr-4x-int8",
         "real-cugan-up3x-denoise3x",
@@ -163,3 +167,25 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
         "realesr-general-x4v3",
         "realesrgan-x4plus",
     ]
+
+
+def test_ultrasharp_is_grouped_as_photo_main_and_dat2_stays_experimental(tmp_path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
+    (models_dir / "DAT2_4x_pretrain.pth").write_bytes(b"fake")
+
+    available = list_available_models(models_dir, get_default_registry())
+
+    assert [model.id for model in available] == ["4x-ultrasharp"]
+    assert available[0].group_label_zh == "照片主力"
+    assert available[0].priority_stars == 4
+
+    dat2 = next(
+        definition
+        for definition in get_default_registry()
+        if definition.id == "dat2-4x-pretrain"
+    )
+    assert dat2.group_label_zh == "照片高质量慢跑"
+    assert dat2.exposure == "evaluation"
+    assert "pretrain" in dat2.warning_zh
