@@ -2,88 +2,33 @@
 
 Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
 
-这个镜像里包含：
-
+它提供：
 - FastAPI 后端
-- 静态导出的 React/Next.js 前端
+- 静态导出的前端界面
 - SQLite 任务队列
-- 首次启动可自动落盘的内置模型包
-- 中文优先操作界面
+- 首次启动自动补齐的内置模型包
+- 中文优先操作流
 
-这个镜像里不包含：
-
+它不提供：
 - GPU 支持
-- ComfyUI 式工作流图
-- 自动模型下载
-- 对外认证层
+- ComfyUI 式工作流
+- 自动下载外部模型
 
-## CPU-only
+## 最快启动
 
-本镜像明确是 `CPU-only`：
-
-- PyTorch CPU 版本
-- ONNX 只走 CPU provider
-- 没有 CUDA / ROCm / Vulkan
-
-## 首次启动
-
-镜像内置模型目录：
+宿主机准备一个目录：
 
 ```text
-/app/bundled-models
+/srv/pixloom
 ```
 
-容器启动时，会把运行目录里缺失的模型文件自动复制到：
-
-```text
-/data/models
-```
-
-已存在的运行时模型不会被覆盖。
-
-## 目录挂载
-
-建议宿主机准备一个统一数据根目录，例如：
-
-```text
-/srv/pixloom/
-├── models/
-├── input/
-├── output/
-├── logs/
-└── state/
-```
-
-容器内固定路径：
-
-- `/data/models`
-- `/data/input`
-- `/data/output`
-- `/data/logs`
-- `/data/state/pixloom.sqlite3`
-
-也就是说，宿主机默认只需要把一个目录挂到 `/data`，容器内部再自行分成 `models / input / output / logs / state`。
-
-## docker run
+启动：
 
 ```bash
 docker run -d \
   --name pixloom \
   --restart unless-stopped \
   -p 7860:7860 \
-  -e PIXLOOM_BUNDLED_MODELS_DIR=/app/bundled-models \
-  -e PIXLOOM_MODELS_DIR=/data/models \
-  -e PIXLOOM_INPUT_DIR=/data/input \
-  -e PIXLOOM_OUTPUT_DIR=/data/output \
-  -e PIXLOOM_LOGS_DIR=/data/logs \
-  -e PIXLOOM_DB_PATH=/data/state/pixloom.sqlite3 \
-  -e PIXLOOM_MAX_INPUT_SIDE=2048 \
-  -e PIXLOOM_MAX_OUTPUT_SIDE=8192 \
-  -e PIXLOOM_MAX_UPLOAD_BYTES=26214400 \
-  -e PIXLOOM_TILE_SIZE=256 \
-  -e PIXLOOM_TILE_OVERLAP=16 \
-  -e PIXLOOM_HISTORY_LIMIT=60 \
-  -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
   -v /srv/pixloom:/data \
   alexisks/pixloom:latest
 ```
@@ -104,29 +49,44 @@ services:
     restart: unless-stopped
     ports:
       - "7860:7860"
-    environment:
-      PIXLOOM_BUNDLED_MODELS_DIR: /app/bundled-models
-      PIXLOOM_MODELS_DIR: /data/models
-      PIXLOOM_INPUT_DIR: /data/input
-      PIXLOOM_OUTPUT_DIR: /data/output
-      PIXLOOM_LOGS_DIR: /data/logs
-      PIXLOOM_DB_PATH: /data/state/pixloom.sqlite3
-      PIXLOOM_MAX_INPUT_SIDE: 2048
-      PIXLOOM_MAX_OUTPUT_SIDE: 8192
-      PIXLOOM_MAX_UPLOAD_BYTES: 26214400
-      PIXLOOM_TILE_SIZE: 256
-      PIXLOOM_TILE_OVERLAP: 16
-      PIXLOOM_HISTORY_LIMIT: 60
-      PIXLOOM_HISTORY_RETENTION_DAYS: 0
     volumes:
       - /srv/pixloom:/data
 ```
 
-启动：
+## 为什么只挂一个目录
 
-```bash
-docker compose up -d
+容器内部仍然会使用这些路径：
+- `/data/models`
+- `/data/input`
+- `/data/output`
+- `/data/logs`
+- `/data/state/pixloom.sqlite3`
+
+但部署层默认只需要挂载一个 `/data` 根目录，不需要写五条卷映射。
+
+## 首次启动
+
+镜像内置模型目录：
+
+```text
+/app/bundled-models
 ```
+
+应用启动时会把缺失文件自动补到：
+
+```text
+/data/models
+```
+
+已存在的运行时模型不会被覆盖。
+
+## 当前镜像状态
+
+- `CPU-only`
+- 单端口：`7860`
+- 当前内置模型集：`17`
+- 当前默认可见模型：`16`
+- 隐藏评估模型：`1`（`DAT2 4x 预训练版`）
 
 ## 健康检查
 
@@ -145,8 +105,15 @@ curl http://127.0.0.1:7860/api/health
 }
 ```
 
-## 说明
+## 可选环境变量
 
-- 当前 `8K` 只是最终最长边目标，不是多段链式放大
-- 镜像体积较大，因为内置了模型包
-- 如果你自己挂载了 `/data/models`，运行时目录始终优先生效
+默认部署不需要额外环境变量。
+只有在你要调整限制时，才需要覆盖这些值：
+
+- `PIXLOOM_MAX_INPUT_SIDE`
+- `PIXLOOM_MAX_OUTPUT_SIDE`
+- `PIXLOOM_MAX_UPLOAD_BYTES`
+- `PIXLOOM_TILE_SIZE`
+- `PIXLOOM_TILE_OVERLAP`
+- `PIXLOOM_HISTORY_LIMIT`
+- `PIXLOOM_HISTORY_RETENTION_DAYS`

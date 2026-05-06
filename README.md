@@ -1,90 +1,63 @@
 # Pixloom
 
-Pixloom 是一个面向 NAS 场景的单容器、CPU-only 图片放大控制台。
+Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
 
-它的目标很明确：
+它做的事情很单纯：
+- 上传图片
+- 选一个本地模型
+- 进入后台串行队列
+- 回来看结果、下载结果、查任务和日志
 
-- 用浏览器上传一张或一小批图片
-- 选择一个本地模型
-- 放进后台串行队列慢慢跑
-- 回来看结果、下载结果、查看日志
+它不做这些事：
+- 不做 ComfyUI 式工作流
+- 不做 GPU 路线
+- 不做在线模型市场
+- 不做自动拉模型和自动调参
 
-它不是 ComfyUI，不是工作流编排器，也不是 GPU 图像实验室。
+## 为什么是它
 
-## 项目定位
-
-当前版本的产品边界非常收敛：
-
-- 单容器部署
-- 单端口对外：`7860`
+Pixloom 的目标不是“功能最多”，而是“在 NAS 上稳定落地”：
+- 单容器
+- 单端口：`7860`
 - 单机 CPU 推理
 - SQLite 任务队列
-- 中文优先操作界面
+- 中文优先界面
 - 首次启动自动补齐内置模型
 
-## CPU-only 说明
+这意味着它更像一个长期可维护的家用图像处理台，而不是实验室。
 
-Pixloom 当前明确是 `CPU-only` 项目。
+## 快速开始
 
-- 镜像内安装的是 PyTorch CPU 轮子
-- ONNX 只走 `CPUExecutionProvider`
-- 人脸修复模型也只在 CPU 上运行
-- `/api/health` 会返回 `"runtime": "cpu-only"`
-
-当前没有以下能力：
-
-- CUDA
-- ROCm
-- Vulkan / ncnn
-- 混合 CPU/GPU 推理
-
-## 直接使用已上传镜像
-
-当前已上传的镜像仓库：
+如果你只想部署，直接用已上传镜像：
 
 ```text
 alexisks/pixloom:latest
 ```
 
-如果只是部署，不需要本地 build，直接拉这个镜像即可。
-
-## 目录挂载约定
-
-建议在宿主机准备一个统一数据根目录，例如：
+宿主机只需要准备一个目录，例如：
 
 ```text
-/srv/pixloom/
-├── models/
-├── input/
-├── output/
-├── logs/
-└── state/
+/srv/pixloom
 ```
 
-这几个目录的含义：
+启动：
 
-- `models/`：运行时模型目录
-- `input/`：上传原图
-- `output/`：放大结果
-- `logs/`：JSONL 请求日志
-- `state/`：SQLite 任务库
+```bash
+docker run -d \
+  --name pixloom \
+  --restart unless-stopped \
+  -p 7860:7860 \
+  -v /srv/pixloom:/data \
+  alexisks/pixloom:latest
+```
 
-容器内固定使用：
+打开：
 
 ```text
-/data/models
-/data/input
-/data/output
-/data/logs
-/data/state/pixloom.sqlite3
+http://<宿主机IP>:7860
 ```
 
-也就是说，**宿主机只需要挂载一个 `/srv/pixloom` 到容器里的 `/data`**。
-内部依然会按 `models / input / output / logs / state` 分目录管理，但部署时不需要写五条挂载。
-
-## Docker Compose 部署
-
-推荐部署方式：
+## Docker Compose
 
 ```yaml
 services:
@@ -94,20 +67,6 @@ services:
     restart: unless-stopped
     ports:
       - "7860:7860"
-    environment:
-      PIXLOOM_BUNDLED_MODELS_DIR: /app/bundled-models
-      PIXLOOM_MODELS_DIR: /data/models
-      PIXLOOM_INPUT_DIR: /data/input
-      PIXLOOM_OUTPUT_DIR: /data/output
-      PIXLOOM_LOGS_DIR: /data/logs
-      PIXLOOM_DB_PATH: /data/state/pixloom.sqlite3
-      PIXLOOM_MAX_INPUT_SIDE: 2048
-      PIXLOOM_MAX_OUTPUT_SIDE: 8192
-      PIXLOOM_MAX_UPLOAD_BYTES: 26214400
-      PIXLOOM_TILE_SIZE: 256
-      PIXLOOM_TILE_OVERLAP: 16
-      PIXLOOM_HISTORY_LIMIT: 60
-      PIXLOOM_HISTORY_RETENTION_DAYS: 0
     volumes:
       - /srv/pixloom:/data
 ```
@@ -118,74 +77,43 @@ services:
 docker compose up -d
 ```
 
-查看状态：
+## 数据目录
 
-```bash
-docker compose ps
-docker compose logs -f --tail=120 pixloom
+容器内部固定使用这些路径：
+
+```text
+/data/models
+/data/input
+/data/output
+/data/logs
+/data/state/pixloom.sqlite3
 ```
 
-## docker run 部署
+也就是说，部署层只挂一个 `/data` 就够了。
+内部仍然按 `models / input / output / logs / state` 分目录管理，但这些不需要用户一条条单独挂载。
 
-如果你不想写 `compose.yml`，可以直接这样启动：
+## 首次启动会发生什么
 
-```bash
-docker run -d \
-  --name pixloom \
-  --restart unless-stopped \
-  -p 7860:7860 \
-  -e PIXLOOM_BUNDLED_MODELS_DIR=/app/bundled-models \
-  -e PIXLOOM_MODELS_DIR=/data/models \
-  -e PIXLOOM_INPUT_DIR=/data/input \
-  -e PIXLOOM_OUTPUT_DIR=/data/output \
-  -e PIXLOOM_LOGS_DIR=/data/logs \
-  -e PIXLOOM_DB_PATH=/data/state/pixloom.sqlite3 \
-  -e PIXLOOM_MAX_INPUT_SIDE=2048 \
-  -e PIXLOOM_MAX_OUTPUT_SIDE=8192 \
-  -e PIXLOOM_MAX_UPLOAD_BYTES=26214400 \
-  -e PIXLOOM_TILE_SIZE=256 \
-  -e PIXLOOM_TILE_OVERLAP=16 \
-  -e PIXLOOM_HISTORY_LIMIT=60 \
-  -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
-  -v /srv/pixloom:/data \
-  alexisks/pixloom:latest
-```
-
-停止和删除：
-
-```bash
-docker stop pixloom
-docker rm pixloom
-```
-
-## 首次启动的模型行为
-
-镜像里自带一套内置模型，位置是：
+镜像自带一套内置模型，位置是：
 
 ```text
 /app/bundled-models
 ```
 
-启动时，Pixloom 会把“运行目录里缺失的模型文件”自动复制到：
+应用启动时会把缺失文件自动补到：
 
 ```text
 /data/models
 ```
 
-规则是：
+规则很简单：
+- 空目录第一次启动，会自动种出基础模型
+- 已存在的运行时模型不会被覆盖
+- 你自己替换 `/data/models` 里的文件，运行时目录永远优先生效
 
-- 首次空目录启动时，会自动补齐模型
-- 已存在的运行时模型文件不会被覆盖
-- 你后续手动替换 `/data/models` 里的模型，始终以你自己的文件为准
+## 当前模型矩阵
 
-也就是说，空白数据目录也能“开箱即用”。
-
-## 模型选择逻辑
-
-界面里的模型按用途分组，不按论文名字分组。
-
-当前分组：
-
+默认可见模型分 6 组：
 - `照片主力`
 - `照片高质量慢跑`
 - `动漫/线稿`
@@ -193,15 +121,14 @@ docker rm pixloom
 - `快速试跑`
 - `经典旧将`
 
-每个模型后面会显示星级，表示它在当前组里的推荐优先级：
+星级不是论文排名，只是当前组内的推荐优先级：
+- `★★★★★` 第一推荐
+- `★★★★☆` 强力备选
+- `★★★☆☆` 通用或兜底
+- `★★☆☆☆` 慢速专项
+- `★☆☆☆☆` 实验用途
 
-- `★★★★★`：当前组第一推荐
-- `★★★★☆`：强力备选
-- `★★★☆☆`：通用/兜底/试跑
-- `★★☆☆☆`：慢速专项
-- `★☆☆☆☆`：实验用途
-
-## 当前默认可见模型
+当前默认可见模型：
 
 ### 照片主力
 
@@ -237,9 +164,51 @@ docker rm pixloom
 - `照片自然 - 4x Remacri` `★★★★☆`
 - `照片通用 - Real-ESRGAN 4x` `★★★☆☆`
 
-## 输出尺寸规则
+当前仍保留 1 个隐藏评估模型：
+- `DAT2 4x 预训练版`
 
-当前可选：
+## 真实图片怎么选
+
+基于当前本机真实样张和已有输出记录，这一版选择建议可以定成下面这样：
+
+### 实拍照片
+
+- `4x Remacri`
+  适合人物、旅行照、日常实拍。观感更自然，不会急着把边缘全部推硬。
+- `Real-ESRGAN 4x`
+  适合当稳定基线。你不确定选什么时，它通常是最稳的起点。
+- `4x UltraSharp`
+  更适合风景、建筑、AI 图、压缩网图。边缘更利，但人脸和近景细节可能偏硬。
+- `4x NMKD-Siax`
+  更适合压缩重、噪点多、素材质量不干净的图。
+- `SPAN 4x` / `RealPLKSR 4x`
+  属于新一代日常主力。画质和速度比旧 ESRGAN 组合更平衡。
+
+### 高质量慢跑
+
+- `DRCT 4x`
+  现在是这组里最值得优先试的。砖墙、树叶、布料这类纹理密集场景更有对比价值。
+- `HAT-L 4x`
+  还是可靠的上限基线，更像“稳重的老旗舰”。
+- `DRCT-L 4x`
+  只适合极少量样张做上限压榨，不适合日常操作。
+- `DAT2 4x 预训练版`
+  保留，但不建议放进主流程。因为它是 `pretrain`，不适合拿来代表 DAT 系列最终水平。
+
+### 动漫和线稿
+
+- `APISR 4x`
+  适合压缩重、失真明显的动漫图。
+- `Real-CUGAN 3x 去噪`
+  适合二次元主力放大，线条保护和去噪更稳。
+- `Real-CUGAN 2x 去噪`
+  适合已经接近 2K 的图，想更克制地精修到 4K。
+- `Real-ESRGAN Anime 6B`
+  适合轻量兜底，体积小、跑得快。
+
+## 输出尺寸
+
+可选值：
 
 ```text
 native
@@ -249,17 +218,12 @@ native
 ```
 
 含义：
-
 - `native`：按模型原始倍率输出
-- `2k`：最终最长边 `2048px`
-- `4k`：最终最长边 `4096px`
-- `8k`：最终最长边 `8192px`
+- `2k`：最长边 `2048px`
+- `4k`：最长边 `4096px`
+- `8k`：最长边 `8192px`
 
-注意：
-
-- 只保留长宽比，不裁切
-- `8K` 只是最终目标尺寸，不代表凭空增加真实细节
-- 当前默认不做 `2K -> 4K -> 8K` 链式多段放大
+当前默认不做 `2K -> 4K -> 8K` 链式多段放大。
 
 ## 健康检查
 
@@ -267,7 +231,7 @@ native
 curl http://127.0.0.1:7860/api/health
 ```
 
-示例返回：
+当前镜像的预期返回示例：
 
 ```json
 {
@@ -278,27 +242,41 @@ curl http://127.0.0.1:7860/api/health
 }
 ```
 
-## 常用运维命令
+## 常用命令
 
-查看容器日志：
+查看日志：
 
 ```bash
 docker logs -f --tail=120 pixloom
 ```
 
-查看任务接口：
+查看任务：
 
 ```bash
 curl http://127.0.0.1:7860/api/tasks
 ```
 
-查看模型接口：
+查看模型：
 
 ```bash
 curl http://127.0.0.1:7860/api/models
 ```
 
+## 可选环境变量
+
+如果你只是部署，默认不需要传任何环境变量。
+只有在你明确要改限制或行为时，才需要覆盖这些可选项：
+
+- `PIXLOOM_MAX_INPUT_SIDE`
+- `PIXLOOM_MAX_OUTPUT_SIDE`
+- `PIXLOOM_MAX_UPLOAD_BYTES`
+- `PIXLOOM_TILE_SIZE`
+- `PIXLOOM_TILE_OVERLAP`
+- `PIXLOOM_HISTORY_LIMIT`
+- `PIXLOOM_HISTORY_RETENTION_DAYS`
+
 ## 相关文档
 
 - 架构说明：[docs/ARCHITECTURE.md](/home/projects/pixloom/docs/ARCHITECTURE.md)
 - 完整模型清单：[docs/MODEL_CATALOG.md](/home/projects/pixloom/docs/MODEL_CATALOG.md)
+- 模型评估记录：[docs/MODEL_EVALUATION.md](/home/projects/pixloom/docs/MODEL_EVALUATION.md)

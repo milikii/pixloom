@@ -8,20 +8,5 @@ services:
     restart: unless-stopped
     ports:
       - "7860:7860"
-    environment:
-      PIXLOOM_FRONTEND_DIST: /app/frontend-out
-      PIXLOOM_BUNDLED_MODELS_DIR: /app/bundled-models
-      PIXLOOM_MODELS_DIR: /data/models
-      PIXLOOM_INPUT_DIR: /data/input
-      PIXLOOM_OUTPUT_DIR: /data/output
-      PIXLOOM_LOGS_DIR: /data/logs
-      PIXLOOM_DB_PATH: /data/state/pixloom.sqlite3
-      PIXLOOM_MAX_INPUT_SIDE: "${PIXLOOM_MAX_INPUT_SIDE:-2048}"
-      PIXLOOM_MAX_OUTPUT_SIDE: "${PIXLOOM_MAX_OUTPUT_SIDE:-8192}"
-      PIXLOOM_MAX_UPLOAD_BYTES: "${PIXLOOM_MAX_UPLOAD_BYTES:-26214400}"
-      PIXLOOM_TILE_SIZE: "${PIXLOOM_TILE_SIZE:-256}"
-      PIXLOOM_TILE_OVERLAP: "${PIXLOOM_TILE_OVERLAP:-16}"
-      PIXLOOM_HISTORY_LIMIT: "${PIXLOOM_HISTORY_LIMIT:-60}"
-      PIXLOOM_HISTORY_RETENTION_DAYS: "${PIXLOOM_HISTORY_RETENTION_DAYS:-0}"
     volumes:
       - ./data:/data
