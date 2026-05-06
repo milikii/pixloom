@@ -44,6 +44,7 @@ class ModelDefinition:
     group_label_zh: str = ""
     group_order: int = 999
     sort_order: int = 999
+    priority_stars: int = 3
 
     def with_models_dir(self, models_dir: Path) -> ResolvedModel:
         return ResolvedModel(
@@ -69,6 +70,7 @@ class ModelDefinition:
             group_label_zh=self.group_label_zh,
             group_order=self.group_order,
             sort_order=self.sort_order,
+            priority_stars=self.priority_stars,
         )
 
 
@@ -96,6 +98,7 @@ class ResolvedModel:
     group_label_zh: str = ""
     group_order: int = 999
     sort_order: int = 999
+    priority_stars: int = 3
 
 
 def get_default_registry() -> tuple[ModelDefinition, ...]:
@@ -121,6 +124,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="经典旧将",
             group_order=60,
             sort_order=10,
+            priority_stars=4,
         ),
         ModelDefinition(
             id="realesrgan-x4plus",
@@ -143,6 +147,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="经典旧将",
             group_order=60,
             sort_order=20,
+            priority_stars=3,
         ),
         ModelDefinition(
             id="4x-ultrasharp",
@@ -165,6 +170,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="经典旧将",
             group_order=60,
             sort_order=30,
+            priority_stars=4,
         ),
         ModelDefinition(
             id="4x-nmkd-siax-200k",
@@ -187,6 +193,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片主力",
             group_order=10,
             sort_order=30,
+            priority_stars=4,
         ),
         ModelDefinition(
             id="realesrgan-x4plus-anime",
@@ -208,6 +215,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="动漫/线稿",
             group_order=30,
             sort_order=30,
+            priority_stars=4,
         ),
         ModelDefinition(
             id="realesr-general-x4v3",
@@ -229,6 +237,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="快速试跑",
             group_order=50,
             sort_order=10,
+            priority_stars=3,
         ),
         ModelDefinition(
             id="span-4x",
@@ -252,6 +261,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片主力",
             group_order=10,
             sort_order=10,
+            priority_stars=5,
         ),
         ModelDefinition(
             id="realplksr-4x",
@@ -275,6 +285,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片主力",
             group_order=10,
             sort_order=20,
+            priority_stars=5,
         ),
         ModelDefinition(
             id="dat2-4x-pretrain",
@@ -298,6 +309,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片高质量慢跑",
             group_order=20,
             sort_order=30,
+            priority_stars=1,
         ),
         ModelDefinition(
             id="hat-l-4x",
@@ -321,6 +333,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片高质量慢跑",
             group_order=20,
             sort_order=10,
+            priority_stars=2,
         ),
         ModelDefinition(
             id="omnisr-4x-df2k",
@@ -344,6 +357,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片高质量慢跑",
             group_order=20,
             sort_order=40,
+            priority_stars=1,
         ),
         ModelDefinition(
             id="omnisr-x4-div2k",
@@ -367,6 +381,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="照片高质量慢跑",
             group_order=20,
             sort_order=50,
+            priority_stars=1,
         ),
         ModelDefinition(
             id="apisr-4x-int8",
@@ -390,6 +405,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="动漫/线稿",
             group_order=30,
             sort_order=10,
+            priority_stars=5,
         ),
         ModelDefinition(
             id="real-cugan-up3x-denoise3x",
@@ -413,6 +429,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="动漫/线稿",
             group_order=30,
             sort_order=20,
+            priority_stars=5,
         ),
         ModelDefinition(
             id="codeformer",
@@ -436,6 +453,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="人脸修复",
             group_order=40,
             sort_order=10,
+            priority_stars=5,
         ),
         ModelDefinition(
             id="gfpgan-v14",
@@ -459,6 +477,7 @@ def get_default_registry() -> tuple[ModelDefinition, ...]:
             group_label_zh="人脸修复",
             group_order=40,
             sort_order=20,
+            priority_stars=4,
         ),
     )
 

@@ -40,6 +40,7 @@ def get_models(config: AppConfig = Depends(get_config)):
                 "group_label_zh": m.group_label_zh,
                 "group_order": m.group_order,
                 "sort_order": m.sort_order,
+                "priority_stars": m.priority_stars,
                 "notes": m.notes,
             }
             for m in operator

@@ -40,7 +40,8 @@ Current examples:
   limits, retention days, and database path.
 - `app/model_registry.py`: `ModelSpec` and `ResolvedModel` define registry and
   UI-visible model metadata, including Chinese guidance fields and dropdown group
-  metadata such as `group`, `group_label_zh`, `group_order`, and `sort_order`.
+  metadata such as `group`, `group_label_zh`, `group_order`, `sort_order`, and
+  `priority_stars`.
 - `app/inference.py`: `UpscaleRequest`, `UpscaleResult`, and `InferenceError`
   define the request, success, and expected-failure contracts.
 - `app/tasks.py`: `BatchRecord`, `TaskRecord`, and `TaskDeleteResult` define the
