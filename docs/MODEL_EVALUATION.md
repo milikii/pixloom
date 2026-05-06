@@ -41,6 +41,45 @@ UI ordering should stay conservative for CPU-only NAS usage:
 Each UI entry must expose style, speed class, local acceptance status, and one
 operator warning before submission.
 
+## Real-Image Comparison Notes (2026-05-06)
+
+This section is the current selection guidance based on the real-image outputs already
+generated locally under `output/`. It is not a benchmark table. It is the operator
+decision layer.
+
+### Real photos
+
+- `4x-remacri`: the most natural-looking option for portraits, travel shots, and
+  mixed real-world photos where you do not want hard edges.
+- `realesrgan-x4plus`: the stable baseline. Use it when you need a sane reference
+  before comparing sharper or slower models.
+- `4x-ultrasharp`: the stronger edge-contrast option. Better for buildings,
+  landscapes, AI art, and compressed web images; less forgiving on skin and close-up
+  texture.
+- `4x-nmkd-siax-200k`: the better rescue option for noisy or compressed sources.
+- `span-4x` / `realplksr-4x`: the newer day-to-day choices. They make more sense
+  than older ESRGAN weights when you want a modern default set.
+
+### Slow quality-ceiling lane
+
+- `drct-4x`: the most useful new addition in this lane. It earns its slot when the
+  image has dense texture such as leaves, brick, fabric, or fine surface detail.
+- `hat-l-4x`: still a valid slow reference. More conservative than DRCT in how it
+  presents detail.
+- `drct-l-4x`: for upper-bound comparison only. Treat it as a lab model, not a
+  normal daily choice.
+- `dat2-4x-pretrain`: kept only as an evaluation artifact. It is useful for research
+  curiosity, but not for launch recommendations because this pretrain weight is not a
+  good stand-in for the final DAT experience.
+
+### Anime and line art
+
+- `apisr-4x-int8`: use for heavily compressed anime or damaged lines.
+- `real-cugan-up3x-denoise3x`: the main anime denoise route.
+- `real-cugan-up2x-denoise3x`: the restrained 2x precision route when the image is
+  already close to target size and you do not want to over-push it.
+- `realesrgan-x4plus-anime`: the lightweight fallback.
+
 ## Current Local Inventory Snapshot
 
 As of 2026-05-01, the local `models/` directory currently contains:
