@@ -1,94 +1,86 @@
 # Pixloom
 
-Pixloom is a self-hosted NAS image upscaling WebUI. It runs as one Docker Compose
-service with a React static frontend, a FastAPI backend, and CPU-only inference.
+Pixloom is a self-hosted, single-container, CPU-only image upscaling console for
+NAS use. It is built for "upload, queue, leave it running, come back later", not
+for interactive GPU tinkering.
 
-The current release is intentionally narrow:
+The product contract is intentionally narrow:
+
+- one Docker Compose service
+- one external port: `7860`
+- one CPU-only inference stack
+- one SQLite task queue
+- one Chinese-first operator UI
+- one bundled first-boot model pack
+
+Pixloom is not ComfyUI, not a workflow graph, not a model downloader, and not a
+GPU image lab.
+
+## What It Does
 
 - upload one image or a small batch
-- choose an installed model
-- run CPU upscaling sequentially
-- preview the output
-- download the result
+- choose a locally installed model
+- see grouped model guidance before submit
+- run sequential CPU upscaling in the background
+- preview results and download outputs
+- keep tasks, inputs, outputs, and logs on disk
 
-Pixloom is not a ComfyUI replacement and does not expose a workflow graph.
+## CPU-Only Contract
 
-Current operator-facing behavior:
+Pixloom is CPU-only by design.
 
-- the main WebUI copy is Chinese-first
-- the model selector shows suitability guidance before inference starts
-- output size can stay at the model's native scale or target a 2K/4K/8K longest side
-- every upscale run gets a request id
-- single-image and batch runs are recorded in a SQLite task queue
-- the task list shows queued, running, completed, failed, deleted, and interrupted work
-- failures show operator guidance instead of a raw traceback
-- request events are appended as JSONL under `logs/`
-- FastAPI serves `/api/*`, `/api/files/*`, the background worker, and the built
-  React/Next.js frontend from one container on port `7860`
+- PyTorch is installed from the CPU wheel index in the image
+- ONNX models run through `CPUExecutionProvider`
+- face restoration is forced to CPU
+- `/api/health` reports `"runtime": "cpu-only"`
 
-## Directory Layout
+There is no CUDA, ROCm, Vulkan, ncnn, or mixed CPU/GPU mode in the current
+release.
+
+## Runtime Shape
 
 ```text
-.
-├── Dockerfile
-├── .dockerignore
-├── compose.yml
-├── app/
-│   ├── config.py
-│   ├── history.py
-│   ├── inference.py
-│   ├── model_inventory.py
-│   ├── model_matrix.py
-│   ├── model_registry.py
-│   ├── request_logging.py
-│   ├── tasks.py
-│   └── spandrel_backend.py
-├── backend/
-│   ├── requirements.txt
-│   ├── pixloom_api/
-│   │   ├── main.py
-│   │   ├── deps.py
-│   │   └── routers/
-│   │       ├── batches.py
-│   │       ├── files.py
-│   │       ├── health.py
-│   │       ├── logs.py
-│   │       ├── models.py
-│   │       ├── tasks.py
-│   │       └── upload.py
-│   ├── worker/
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── i18n/
-│   │   ├── lib/
-│   │   └── providers/
-│   ├── package.json
-│   └── next.config.ts
-├── models/
-├── input/
-├── output/
-├── logs/
-└── state/
+browser
+  -> http://NAS:7860
+     -> FastAPI
+        -> static React/Next.js export
+        -> /api/*
+        -> in-process worker
+        -> SQLite queue
+        -> CPU-only inference
+        -> /data models/input/output/logs/state
 ```
 
-Runtime data is persisted in:
+## Quick Start
 
-- `models/`: runtime model files used by the app
-- `input/`: uploaded source images
-- `output/`: generated upscaled images
-- `logs/`: JSONL request audit trail
-- `state/`: SQLite task queue database
+```bash
+docker compose up -d --build
+```
 
-## Task Queue State
+Open:
 
-Pixloom records each submitted image as a task in SQLite. The default database path
-is `state/pixloom.sqlite3`; Compose mounts it as `/data/state/pixloom.sqlite3`.
+```text
+http://<your-nas-ip>:7860
+```
 
-Current task statuses are:
+## Data And Storage
+
+Runtime storage lives in the repo root and is mounted into `/data` in the
+container:
+
+- `models/` -> `/data/models`
+- `input/` -> `/data/input`
+- `output/` -> `/data/output`
+- `logs/` -> `/data/logs`
+- `state/` -> `/data/state`
+
+SQLite task state lives in:
+
+```text
+state/pixloom.sqlite3
+```
+
+Task statuses:
 
 ```text
 queued
@@ -99,265 +91,163 @@ deleted
 interrupted
 ```
 
-`request_id` remains the per-image trace id used in the WebUI and JSONL logs.
-`batch_id` groups related uploads. A single-image submission creates a one-item
-batch; a multi-image submission creates one batch with one task per image.
+## Bundled Models
 
-On app startup, any task left as `running` is marked `interrupted` so a restart does
-not leave invisible in-progress work.
-
-Deleting a task removes only linked files that are safely under the configured
-`input/` and `output/` directories, marks the SQLite row as `deleted`, and appends
-a `task_deleted` audit event. Running tasks cannot be deleted.
-
-Each batch and task also stores `output_size_preset`. Current values are:
+The image contains a bundled model pack under:
 
 ```text
-native  -> original model scale
-2k      -> final longest side 2048px
-4k      -> final longest side 4096px
-8k      -> final longest side 8192px
+/app/bundled-models
 ```
 
-Target presets preserve aspect ratio. They do not crop to a video frame and do not
-promise extra real detail beyond what the selected model can reconstruct.
+On startup, Pixloom copies any missing bundled files into the runtime
+`/data/models` directory.
 
-## Model Files
+Rules:
 
-Pixloom now supports a bundled model pack for first boot. The Docker image can
-ship a curated baseline set under `/app/bundled-models`, and app startup copies
-only missing files into the runtime `models/` directory. Existing runtime files
-always win; startup never overwrites a model you already replaced locally.
+- bundled files seed first boot
+- runtime files remain the source of truth after boot
+- existing runtime files are never overwritten
+- manual replacements in `models/` keep winning
 
-The runtime `models/` directory still remains the source of truth after boot.
-Manual additions and replacements continue to work there.
+This means a fresh empty `/data` mount still starts with a usable model set.
 
-Current expected filenames:
+## Model Selection
+
+The dropdown is grouped by use case, not by architecture jargon.
+
+Current groups:
+
+- `照片主力`
+- `照片高质量慢跑`
+- `动漫/线稿`
+- `人脸修复`
+- `快速试跑`
+- `经典旧将`
+
+Stars show recommended priority inside the current group:
+
+- `★★★★★` first pick
+- `★★★★☆` strong fallback
+- `★★★☆☆` utility / baseline / smoke test
+- `★★☆☆☆` slow specialist
+- `★☆☆☆☆` experiment only
+
+The UI does not hide the fact that some models are old. Old but still useful
+weights stay visible under `经典旧将` instead of being mixed into the mainline
+recommendations.
+
+## Current Operator Set
+
+### 照片主力
+
+- `SPAN 4x` `★★★★★`
+- `RealPLKSR 4x` `★★★★★`
+- `照片修复 - 4x NMKD-Siax` `★★★★☆`
+
+### 照片高质量慢跑
+
+- `质量上限 - HAT-L 4x` `★★☆☆☆`
+
+### 动漫/线稿
+
+- `APISR 4x` `★★★★★`
+- `动漫修复 - Real-CUGAN 3x 去噪` `★★★★★`
+- `动漫插画 - Real-ESRGAN Anime 6B` `★★★★☆`
+
+### 人脸修复
+
+- `CodeFormer` `★★★★★`
+- `GFPGAN v1.4` `★★★★☆`
+
+### 快速试跑
+
+- `快速试跑 - Real-ESRGAN General v3` `★★★☆☆`
+
+### 经典旧将
+
+- `照片自然 - 4x Remacri` `★★★★☆`
+- `照片通用 - Real-ESRGAN 4x` `★★★☆☆`
+- `锐化插画 - 4x UltraSharp` `★★★★☆`
+
+## Installed Evaluation Pool
+
+These models can be installed and bundled but are currently hidden from the main
+operator dropdown:
+
+- `DAT 4x` `★☆☆☆☆`
+- `OmniSR 4x DF2K` `★☆☆☆☆`
+- `OmniSR X4 DIV2K` `★☆☆☆☆`
+
+## Output Size Rules
+
+Available presets:
 
 ```text
-models/SPAN_pretrain.pth
-models/RealPLKSR_4x.pth
-models/4x_NMKD-Siax_200k.pth
-models/RealESRGAN_x4plus.pth
-models/RealESRGAN_x4plus_anime_6B.pth
-models/realesr-general-x4v3.pth
-models/4x-UltraSharp.pth
-models/4x_foolhardy_Remacri.pth
-models/HAT-L-4x.pth
-models/DAT2_4x_pretrain.pth
-models/OmniSR_4x_DF2K.pth
-models/OmniSR_X4_DIV2K.safetensors
-models/APISR_4x_int8.onnx
-models/up3x-latest-denoise3x.pth
-models/codeformer.pth
-models/GFPGANv1.4.pth
-models/facelib/detection_Resnet50_Final.pth
-models/facelib/parsing_parsenet.pth
+native
+2k
+4k
+8k
 ```
 
-Only models that are both locally present and marked for operator exposure appear in
-the primary WebUI dropdown. Installed-but-unapproved evaluation models may exist on
-disk without being shown in the default submission flow.
+Meaning:
 
-Recommended operator choices:
+- `native`: model's own scale
+- `2k`: final longest side `2048px`
+- `4k`: final longest side `4096px`
+- `8k`: final longest side `8192px`
 
-- `SPAN 4x`: default daily photo/general choice for CPU NAS use
-- `RealPLKSR 4x`: newer photo/detail-focused mainline alternative
-- `照片修复 - 4x NMKD-Siax`: noisy or compressed real-photo recovery
-- `APISR 4x`: main anime/compressed-line restoration choice
-- `动漫修复 - Real-CUGAN 3x 去噪`: Bilibili-origin anime denoise specialist
-- `动漫插画 - Real-ESRGAN Anime 6B`: light anime fallback
-- `CodeFormer` / `GFPGAN v1.4`: face restoration
-- `快速试跑 - Real-ESRGAN General v3`: quick smoke tests for upload, queue, and
-  output path behavior
-- `质量上限 - HAT-L 4x`: slow CPU path for small batches when detail ceiling matters
-  more than latency
+Important:
 
-Current runtime exposure rule:
+- Pixloom preserves aspect ratio
+- Pixloom does not crop to a fixed canvas
+- Pixloom does not promise new real detail just because the target is bigger
+- Pixloom does not use chained `2K -> 4K -> 8K` multi-pass upscaling by default
 
-- `照片主力`: `SPAN 4x`, `RealPLKSR 4x`, `4x NMKD-Siax`, `Real-ESRGAN 4x`
-- `照片高质量慢跑`: `HAT-L 4x`
-- `动漫/线稿`: `APISR 4x`, `Real-CUGAN 3x 去噪`, `Real-ESRGAN Anime 6B`
-- `人脸修复`: `CodeFormer`, `GFPGAN v1.4`
-- `快速试跑`: `Real-ESRGAN General v3`
-- `经典旧将`: `Real-ESRGAN 4x`, `Remacri`, `UltraSharp`
+## API
 
-Older classic models can stay visible as a separate last group instead of being
-mixed into the main daily-use recommendations. If local model files exist but none
-are yet accepted for daily use, the UI shows a Chinese-first message explaining
-that the models are present but not yet opened to normal operators.
+- `GET /api/health`
+- `GET /api/models`
+- `POST /api/upload`
+- `POST /api/batches`
+- `GET /api/tasks`
+- `DELETE /api/tasks/{request_id}`
+- `GET /api/logs/{request_id}`
+- `GET /api/files/input/{path}`
+- `GET /api/files/output/{path}`
 
-The model guidance panel shows best fit, style, CPU speed class, local acceptance
-status, and a warning before the operator submits a task.
+Example health response:
 
-## Start
+```json
+{
+  "status": "ok",
+  "runtime": "cpu-only",
+  "models_installed": 16,
+  "models_operator": 13
+}
+```
+
+## Verification
 
 ```bash
-docker compose up -d --build
-```
-
-Open the app from another device on the same LAN, or locally on the NAS:
-
-```text
-http://192.168.2.220:7860
-```
-
-The default Compose file publishes the port on the NAS host:
-
-```yaml
-ports:
-  - "7860:7860"
-```
-
-This is suitable for trusted LAN access. Do not expose this port directly to the public internet.
-
-## Stop
-
-```bash
-docker compose down
-```
-
-## Rebuild After Code Changes
-
-```bash
+.venv/bin/pytest -q
+cd frontend && npm run lint
+cd frontend && npm run build
 docker compose build
 docker compose up -d
+curl http://127.0.0.1:7860/api/health
 ```
 
-## View Logs
+## Logs
+
+Tail container logs:
 
 ```bash
 docker compose logs -f --tail=120 pixloom
 ```
 
-Request-level audit logs are written under `logs/` as JSONL files. When a run fails,
-the WebUI shows a request id that can be matched against those files.
+Request-level audit logs are stored as JSONL under `logs/`.
 
-## Task List And File Retention
+## Related Docs
 
-Successful runs are kept on disk:
-
-- uploaded source images are saved under `input/`
-- upscaled results are saved under `output/`
-- request logs are appended under `logs/`
-
-The WebUI now submits into a background SQLite-backed worker. The main screen is
-styled as a compact operator console, and the right column is split into `结果`,
-`任务`, and `日志` tabs so the operator does not have to scroll a single long
-sidebar. The task tab auto-refreshes every few seconds from SQLite, keeps task
-detail in one accordion, and collapses completed thumbnails by default. Selecting a
-task restores its details, output preview/download when available, and request log
-excerpt. Deleting a task removes the linked input and output files from local
-storage when those paths are safe runtime paths. Logs remain append-only for audit
-and request-id lookup.
-
-Running tasks now persist progress stage and percentage into SQLite. The selected
-task view estimates remaining time from the current progress fraction and refreshes
-that estimate on the polling timer. On narrow screens, model guidance and output
-save parameters are folded into accordions to keep the submission view shorter.
-Output size remains visible in the submission flow and in task detail because it
-changes the final artifact, not just the file encoding.
-
-Failed runs clean up output files created by that failed request when possible.
-Queue-backed failures keep the persisted input path in the task row so the failed
-task can still be inspected by request id.
-
-Automatic cleanup is disabled by default. To prune old successful history items, set
-`PIXLOOM_HISTORY_RETENTION_DAYS` to a positive number. Cleanup runs when the app
-starts and when the task list is refreshed.
-
-## Runtime Limits
-
-The service defaults to:
-
-- max input side: `2048px`
-- max output side: `8192px`
-- tile size: `256`
-- tile overlap: `16`
-- history items shown: `60`
-- history retention: `0 days` means disabled
-- SQLite DB path: `state/pixloom.sqlite3`
-
-Override these with environment variables in `compose.yml`:
-
-```yaml
-environment:
-  PIXLOOM_DB_PATH: "state/pixloom.sqlite3"
-  PIXLOOM_MAX_INPUT_SIDE: "2048"
-  PIXLOOM_MAX_OUTPUT_SIDE: "8192"
-  PIXLOOM_TILE_SIZE: "256"
-  PIXLOOM_TILE_OVERLAP: "16"
-  PIXLOOM_HISTORY_LIMIT: "60"
-  PIXLOOM_HISTORY_RETENTION_DAYS: "0"
-```
-
-## nginx Reverse Proxy Example
-
-Host nginx should own HTTPS, public hostname, upload size limits, proxy timeout, and login.
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name upscale.example.com;
-
-    client_max_body_size 50m;
-
-    location / {
-        proxy_pass http://127.0.0.1:7860;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_read_timeout 1800s;
-        proxy_send_timeout 1800s;
-    }
-}
-```
-
-Add Basic Auth, Authelia, OAuth2 Proxy, or the existing NAS login layer in nginx.
-
-## Tests
-
-```bash
-.venv/bin/pytest -q
-cd frontend && npm run lint && npm run build
-```
-
-The test suite uses fake models and generated tiny images. It does not require real
-model downloads.
-
-The Docker image installs CPU-only PyTorch wheels explicitly. Do not replace that
-with unconstrained `torch>=...` from the default PyPI index unless GPU/CUDA support
-becomes a deliberate product decision.
-
-## Manual Acceptance Test
-
-Record one real NAS test after confirming the bundled models or runtime `models/`
-directory contain at least one operator-visible model:
-
-```text
-Date: 2026-04-30
-Device: Debian 13 x86_64, Docker CPU-only
-Input file: input/image-dabc1f26-17ef-4e44-91e9-2b55b44c6da0-0.png
-Input size: 1402x1122
-Model: Real-ESRGAN 4x Anime
-Output format: PNG
-Elapsed time: 92.11s
-Output size: 5608x4488
-Output path: output/20260430-031033-809102_image-dabc1f26-17ef-4e44-91e9-2b55b44c6da0-0_realesrgan-x4plus-anime_4x.png
-Result notes: CPU-only upscale completed successfully and the output file was written under output/
-```
-
-Acceptance criteria:
-
-- phone browser opens the WebUI
-- one image uploads successfully
-- at least one installed model appears
-- CPU upscaling completes
-- preview renders
-- download file is available
-- output file exists under `output/`
-- container restart does not remove model or output files
+- Architecture: [docs/ARCHITECTURE.md](/home/projects/pixloom/docs/ARCHITECTURE.md)
+- Full model catalog: [docs/MODEL_CATALOG.md](/home/projects/pixloom/docs/MODEL_CATALOG.md)

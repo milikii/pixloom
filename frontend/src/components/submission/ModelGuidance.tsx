@@ -27,6 +27,11 @@ export function ModelGuidance({
 }: ModelGuidanceProps) {
   const [open, setOpen] = useState(true);
 
+  function starLabel(count: number) {
+    const safe = Math.max(0, Math.min(5, count));
+    return `${"★".repeat(safe)}${"☆".repeat(5 - safe)}`;
+  }
+
   function renderContent() {
     if (!model && hasLocalModels) {
       return (
@@ -75,6 +80,10 @@ export function ModelGuidance({
           {model.group_label_zh || "未分类"}
         </p>
         <ul className="space-y-2 text-sm">
+          <li className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">优先级</span>
+            <span className="text-foreground">{starLabel(model.priority_stars)}</span>
+          </li>
           <li className="flex items-start gap-2">
             <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
               适合

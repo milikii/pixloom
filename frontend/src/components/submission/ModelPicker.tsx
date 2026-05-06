@@ -17,11 +17,17 @@ const SPEED_BADGES: Record<string, string> = {
   "较快": "⚡",
 };
 
+function starLabel(count: number) {
+  const full = "★".repeat(Math.max(0, Math.min(5, count)));
+  const empty = "☆".repeat(Math.max(0, 5 - Math.max(0, Math.min(5, count))));
+  return `${full}${empty}`;
+}
+
 function optionLabel(model: ResolvedModel) {
   const speedBadge = SPEED_BADGES[model.speed_zh]
     ? `  ${SPEED_BADGES[model.speed_zh]}`
     : "";
-  return `${model.display_name_zh || model.display_name}${speedBadge}`;
+  return `${model.display_name_zh || model.display_name}  ${starLabel(model.priority_stars)}${speedBadge}`;
 }
 
 export function ModelPicker({

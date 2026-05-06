@@ -16,6 +16,7 @@ def health_check(request: Request):
     available = list_available_models(config.models_dir)
     return {
         "status": "ok",
+        "runtime": "cpu-only",
         "models_installed": len(installed),
         "models_operator": len(available),
     }

@@ -5,7 +5,7 @@ from pathlib import Path
 from app.config import AppConfig
 from app.tasks import list_tasks
 from backend.pixloom_api.main import create_app
-from backend.pixloom_api.routers import batches, models, tasks
+from backend.pixloom_api.routers import batches, health, models, tasks
 
 
 def _config(tmp_path: Path) -> AppConfig:
@@ -30,6 +30,7 @@ def test_models_endpoint_lists_operator_models(tmp_path):
     assert body["models"][0]["id"] == "span-4x"
     assert body["models"][0]["display_name_zh"] == "SPAN 4x"
     assert body["models"][0]["group_label_zh"] == "照片主力"
+    assert body["models"][0]["priority_stars"] == 5
 
 
 def test_batch_endpoint_enqueues_tasks_and_task_endpoint_lists_them(tmp_path):
@@ -142,3 +143,14 @@ def test_create_app_syncs_bundled_models_into_runtime_dir(tmp_path, monkeypatch)
     import asyncio
 
     asyncio.run(_run())
+
+
+def test_health_endpoint_reports_cpu_only_runtime(tmp_path):
+    config = _config(tmp_path)
+    config.models_dir.mkdir(parents=True)
+    body = health.health_check(
+        type("Req", (), {"app": type("App", (), {"state": type("State", (), {"config": config})()})()})()
+    )
+
+    assert body["status"] == "ok"
+    assert body["runtime"] == "cpu-only"

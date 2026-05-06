@@ -6,6 +6,7 @@ export interface ResolvedModel {
   group_label_zh: string;
   group_order: number;
   sort_order: number;
+  priority_stars: number;
   backend: string;
   architecture: string;
   scale: number;

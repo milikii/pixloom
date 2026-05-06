@@ -68,6 +68,8 @@ logs.
 - Operator-visible models should also carry dropdown grouping fields so the
   picker can render grouped sections such as `照片主力`, `动漫/线稿`, or
   `人脸修复` instead of one flat undifferentiated list.
+- The picker may append star priority markers to each option label. Use them only
+  as within-group recommendation hints, not as a fake universal benchmark score.
 - Status and error boxes should include request id when relevant.
 - Task list must show status labels for queued/running/completed/failed/deleted/
   interrupted rows.
