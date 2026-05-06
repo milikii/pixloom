@@ -13,11 +13,13 @@ output/*
 logs/*
 models/*
 state/*
+data/*
 !input/.gitkeep
 !output/.gitkeep
 !logs/.gitkeep
 !models/.gitkeep
 !state/.gitkeep
+!data/.gitkeep
 
 # Local environment
 .env

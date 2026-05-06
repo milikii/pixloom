@@ -43,7 +43,7 @@ Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
 
 ## 目录挂载
 
-建议宿主机准备一个统一数据目录，例如：
+建议宿主机准备一个统一数据根目录，例如：
 
 ```text
 /srv/pixloom/
@@ -61,6 +61,8 @@ Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
 - `/data/output`
 - `/data/logs`
 - `/data/state/pixloom.sqlite3`
+
+也就是说，宿主机默认只需要把一个目录挂到 `/data`，容器内部再自行分成 `models / input / output / logs / state`。
 
 ## docker run
 
@@ -82,11 +84,7 @@ docker run -d \
   -e PIXLOOM_TILE_OVERLAP=16 \
   -e PIXLOOM_HISTORY_LIMIT=60 \
   -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
-  -v /srv/pixloom/models:/data/models \
-  -v /srv/pixloom/input:/data/input \
-  -v /srv/pixloom/output:/data/output \
-  -v /srv/pixloom/logs:/data/logs \
-  -v /srv/pixloom/state:/data/state \
+  -v /srv/pixloom:/data \
   alexisks/pixloom:latest
 ```
 
@@ -121,11 +119,7 @@ services:
       PIXLOOM_HISTORY_LIMIT: 60
       PIXLOOM_HISTORY_RETENTION_DAYS: 0
     volumes:
-      - /srv/pixloom/models:/data/models
-      - /srv/pixloom/input:/data/input
-      - /srv/pixloom/output:/data/output
-      - /srv/pixloom/logs:/data/logs
-      - /srv/pixloom/state:/data/state
+      - /srv/pixloom:/data
 ```
 
 启动：
@@ -146,8 +140,8 @@ curl http://127.0.0.1:7860/api/health
 {
   "status": "ok",
   "runtime": "cpu-only",
-  "models_installed": 16,
-  "models_operator": 13
+  "models_installed": 14,
+  "models_operator": 12
 }
 ```
 

@@ -169,11 +169,10 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
     ]
 
 
-def test_ultrasharp_is_grouped_as_photo_main_and_dat2_stays_experimental(tmp_path):
+def test_ultrasharp_is_grouped_as_photo_main(tmp_path):
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
-    (models_dir / "DAT2_4x_pretrain.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
@@ -181,6 +180,8 @@ def test_ultrasharp_is_grouped_as_photo_main_and_dat2_stays_experimental(tmp_pat
     assert available[0].group_label_zh == "照片主力"
     assert available[0].priority_stars == 4
 
+
+def test_dat2_stays_in_registry_as_evaluation_model():
     dat2 = next(
         definition
         for definition in get_default_registry()

@@ -50,7 +50,7 @@ alexisks/pixloom:latest
 
 ## 目录挂载约定
 
-建议在宿主机准备一个数据目录，例如：
+建议在宿主机准备一个统一数据根目录，例如：
 
 ```text
 /srv/pixloom/
@@ -79,6 +79,9 @@ alexisks/pixloom:latest
 /data/state/pixloom.sqlite3
 ```
 
+也就是说，**宿主机只需要挂载一个 `/srv/pixloom` 到容器里的 `/data`**。
+内部依然会按 `models / input / output / logs / state` 分目录管理，但部署时不需要写五条挂载。
+
 ## Docker Compose 部署
 
 推荐部署方式：
@@ -106,11 +109,7 @@ services:
       PIXLOOM_HISTORY_LIMIT: 60
       PIXLOOM_HISTORY_RETENTION_DAYS: 0
     volumes:
-      - /srv/pixloom/models:/data/models
-      - /srv/pixloom/input:/data/input
-      - /srv/pixloom/output:/data/output
-      - /srv/pixloom/logs:/data/logs
-      - /srv/pixloom/state:/data/state
+      - /srv/pixloom:/data
 ```
 
 启动：
@@ -148,11 +147,7 @@ docker run -d \
   -e PIXLOOM_TILE_OVERLAP=16 \
   -e PIXLOOM_HISTORY_LIMIT=60 \
   -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
-  -v /srv/pixloom/models:/data/models \
-  -v /srv/pixloom/input:/data/input \
-  -v /srv/pixloom/output:/data/output \
-  -v /srv/pixloom/logs:/data/logs \
-  -v /srv/pixloom/state:/data/state \
+  -v /srv/pixloom:/data \
   alexisks/pixloom:latest
 ```
 
@@ -275,8 +270,8 @@ curl http://127.0.0.1:7860/api/health
 {
   "status": "ok",
   "runtime": "cpu-only",
-  "models_installed": 16,
-  "models_operator": 13
+  "models_installed": 14,
+  "models_operator": 12
 }
 ```
 
