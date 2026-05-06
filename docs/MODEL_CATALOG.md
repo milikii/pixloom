@@ -21,9 +21,12 @@ Star meaning:
 | `4x-nmkd-siax-200k` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `照片修复 - 4x NMKD-Siax` |
 | `4x-ultrasharp` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `锐化插画 - 4x UltraSharp` |
 | `hat-l-4x` | yes | 照片高质量慢跑 | `★★☆☆☆` | `spandrel` | 4 | `质量上限 - HAT-L 4x` |
+| `drct-4x` | yes | 照片高质量慢跑 | `★★★★☆` | `spandrel` | 4 | `DRCT 4x` |
+| `drct-l-4x` | yes | 照片高质量慢跑 | `★★☆☆☆` | `spandrel` | 4 | `DRCT-L 4x` |
 | `dat2-4x-pretrain` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `DAT2 4x 预训练版` |
 | `apisr-4x-int8` | yes | 动漫/线稿 | `★★★★★` | `onnxruntime` | 4 | `APISR 4x` |
 | `real-cugan-up3x-denoise3x` | yes | 动漫/线稿 | `★★★★★` | `spandrel` | 3 | `动漫修复 - Real-CUGAN 3x 去噪` |
+| `real-cugan-up2x-denoise3x` | yes | 动漫/线稿 | `★★★★☆` | `spandrel` | 2 | `动漫精修 - Real-CUGAN 2x 去噪` |
 | `realesrgan-x4plus-anime` | yes | 动漫/线稿 | `★★★★☆` | `spandrel` | 4 | `动漫插画 - Real-ESRGAN Anime 6B` |
 | `codeformer` | yes | 人脸修复 | `★★★★★` | `custom` | 1 | `CodeFormer` |
 | `gfpgan-v14` | yes | 人脸修复 | `★★★★☆` | `custom` | 1 | `GFPGAN v1.4` |
@@ -77,6 +80,28 @@ Star meaning:
 - Warning: CPU 推理明显更慢，不适合大批量或手机上频繁试错。
 - Sharp review: 🏆 多项超分基准测试霸榜的 Transformer 模型。能「理解」图像全局结构，修复极其模糊的边缘。代价：纯 CPU 慢到令人发指，只适合真爱。
 
+### `DRCT 4x`
+
+- Visible: yes
+- Group: `照片高质量慢跑`
+- Stars: `★★★★☆`
+- Backend: `spandrel`
+- Scale: `4`
+- Best fit: 适合追求高质量慢跑，对砖墙、树叶、布料等纹理密集照片做精细对比。
+- Warning: CPU 上很慢，比日常主力模型明显更吃时间；适合少量精品图，不适合手机端频繁试错。
+- Sharp review: 新一代慢跑选手，价值就在于和 HAT-L 并排 A/B。纹理密集场景往往更有看头，但代价依然是纯 CPU 慢跑。
+
+### `DRCT-L 4x`
+
+- Visible: yes
+- Group: `照片高质量慢跑`
+- Stars: `★★☆☆☆`
+- Backend: `spandrel`
+- Scale: `4`
+- Best fit: 适合极少量高质量样张慢跑，对 DRCT 和 HAT-L 的上限做进一步对比。
+- Warning: 权重很大，CPU 上非常慢；只适合愿意长时间等待的极限压榨任务。
+- Sharp review: 这不是日常工具，是实验室器材。要的是画质上限，不是交互效率；真要跑它，就别盯着进度条。
+
 ### `锐化插画 - 4x UltraSharp`
 
 - Visible: yes
@@ -109,6 +134,17 @@ Star meaning:
 - Best fit: 适合动漫、漫画、压缩动画帧和希望顺手做去噪的二次元图片。
 - Warning: 这是 3x 模型，不是 4x；真实照片通常不如照片模型自然。
 - Sharp review: 🏆 B站开源镇馆之宝。对线条保护和色块平滑的处理至今难逢敌手，甚至能修复画师原画的作画瑕疵。二次元/线稿类图像的终极选择。
+
+### `动漫精修 - Real-CUGAN 2x 去噪`
+
+- Visible: yes
+- Group: `动漫/线稿`
+- Stars: `★★★★☆`
+- Backend: `spandrel`
+- Scale: `2`
+- Best fit: 适合已经接近 2K 的动漫图做 2x 精修到 4K，或先做一轮 2x 线条去噪。
+- Warning: 这是 2x 模型，不是 4x；更偏精修和去噪，不是大倍率放大的主力替代品。
+- Sharp review: 给二次元精修补上的关键位。图本身不算太糊、只想稳稳放大一轮时，2x 这条线比直接冲 4x 更克制。
 
 ### `动漫插画 - Real-ESRGAN Anime 6B`
 

@@ -75,21 +75,37 @@ def test_list_available_models_includes_real_cugan_and_hat_when_present(tmp_path
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     (models_dir / "HAT-L-4x.pth").write_bytes(b"fake")
+    (models_dir / "DRCT_X4.pth").write_bytes(b"fake")
+    (models_dir / "DRCT-L_X4.pth").write_bytes(b"fake")
+    (models_dir / "up2x-latest-denoise3x.pth").write_bytes(b"fake")
     (models_dir / "up3x-latest-denoise3x.pth").write_bytes(b"fake")
 
     available = list_available_models(models_dir, get_default_registry())
 
     assert [model.id for model in available] == [
+        "drct-4x",
         "hat-l-4x",
+        "drct-l-4x",
         "real-cugan-up3x-denoise3x",
+        "real-cugan-up2x-denoise3x",
     ]
     assert available[0].backend == "spandrel"
     assert available[0].speed_zh == "很慢"
     assert available[0].group_label_zh == "照片高质量慢跑"
     assert available[1].backend == "spandrel"
-    assert available[1].scale == 3
-    assert "3x" in available[1].warning_zh
-    assert available[1].group_label_zh == "动漫/线稿"
+    assert available[1].speed_zh == "很慢"
+    assert available[1].group_label_zh == "照片高质量慢跑"
+    assert available[2].backend == "spandrel"
+    assert available[2].speed_zh == "很慢"
+    assert available[2].group_label_zh == "照片高质量慢跑"
+    assert available[3].backend == "spandrel"
+    assert available[3].scale == 3
+    assert "3x" in available[3].warning_zh
+    assert available[3].group_label_zh == "动漫/线稿"
+    assert available[4].backend == "spandrel"
+    assert available[4].scale == 2
+    assert "2x" in available[4].warning_zh
+    assert available[4].group_label_zh == "动漫/线稿"
 
 
 def test_resolve_model_rejects_unknown_model_id(tmp_path):
@@ -144,7 +160,10 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
     (models_dir / "4x-UltraSharp.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
     (models_dir / "HAT-L-4x.pth").write_bytes(b"fake")
+    (models_dir / "DRCT_X4.pth").write_bytes(b"fake")
+    (models_dir / "DRCT-L_X4.pth").write_bytes(b"fake")
     (models_dir / "up3x-latest-denoise3x.pth").write_bytes(b"fake")
+    (models_dir / "up2x-latest-denoise3x.pth").write_bytes(b"fake")
     (models_dir / "RealESRGAN_x4plus_anime_6B.pth").write_bytes(b"fake")
     (models_dir / "realesr-general-x4v3.pth").write_bytes(b"fake")
     (models_dir / "APISR_4x_int8.onnx").write_bytes(b"fake")
@@ -158,9 +177,12 @@ def test_list_available_models_includes_newly_supported_backends(tmp_path):
         "realplksr-4x",
         "4x-nmkd-siax-200k",
         "4x-ultrasharp",
+        "drct-4x",
         "hat-l-4x",
+        "drct-l-4x",
         "apisr-4x-int8",
         "real-cugan-up3x-denoise3x",
+        "real-cugan-up2x-denoise3x",
         "realesrgan-x4plus-anime",
         "codeformer",
         "gfpgan-v14",

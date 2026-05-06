@@ -140,8 +140,8 @@ curl http://127.0.0.1:7860/api/health
 {
   "status": "ok",
   "runtime": "cpu-only",
-  "models_installed": 14,
-  "models_operator": 12
+  "models_installed": 17,
+  "models_operator": 16
 }
 ```
 
