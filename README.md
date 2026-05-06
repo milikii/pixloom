@@ -213,6 +213,7 @@ docker rm pixloom
 - `SPAN 4x` `★★★★★`
 - `RealPLKSR 4x` `★★★★★`
 - `照片修复 - 4x NMKD-Siax` `★★★★☆`
+- `锐化插画 - 4x UltraSharp` `★★★★☆`
 
 ### 照片高质量慢跑
 
@@ -237,7 +238,6 @@ docker rm pixloom
 
 - `照片自然 - 4x Remacri` `★★★★☆`
 - `照片通用 - Real-ESRGAN 4x` `★★★☆☆`
-- `锐化插画 - 4x UltraSharp` `★★★★☆`
 
 ## 输出尺寸规则
 
