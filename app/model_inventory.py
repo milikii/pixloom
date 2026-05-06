@@ -18,6 +18,7 @@ class ModelInventoryEntry:
     exposure: ExposureLevel | str
     operator_visible: bool
     stability_zh: str
+    group_label_zh: str
 
 
 def build_model_inventory(
@@ -48,6 +49,7 @@ def build_model_inventory(
                     exposure="untracked",
                     operator_visible=False,
                     stability_zh="未登记",
+                    group_label_zh="",
                 )
             )
             continue
@@ -63,6 +65,7 @@ def build_model_inventory(
                 exposure=definition.exposure,
                 operator_visible=definition.enabled and definition.exposure == "operator",
                 stability_zh=definition.stability_zh,
+                group_label_zh=definition.group_label_zh,
             )
         )
 
@@ -71,8 +74,8 @@ def build_model_inventory(
 
 def format_inventory_markdown(entries: list[ModelInventoryEntry]) -> str:
     lines = [
-        "| File | Size | SHA256 | Registry id | Exposure | Visible in dropdown | Stability |",
-        "|---|---:|---|---|---|---|---|",
+        "| File | Size | SHA256 | Registry id | Exposure | Visible in dropdown | Group | Stability |",
+        "|---|---:|---|---|---|---|---|---|",
     ]
     for entry in entries:
         lines.append(
@@ -83,6 +86,7 @@ def format_inventory_markdown(entries: list[ModelInventoryEntry]) -> str:
             f"`{entry.registry_id or '-'}` | "
             f"`{entry.exposure}` | "
             f"`{'yes' if entry.operator_visible else 'no'}` | "
+            f"`{entry.group_label_zh or '-'}` | "
             f"`{entry.stability_zh}` |"
         )
     return "\n".join(lines)

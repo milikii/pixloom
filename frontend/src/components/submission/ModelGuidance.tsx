@@ -71,6 +71,9 @@ export function ModelGuidance({
         <h3 className="mb-3 text-sm font-semibold text-foreground">
           {model.display_name_zh || model.display_name}
         </h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {model.group_label_zh || "未分类"}
+        </p>
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2">
             <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">

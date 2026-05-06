@@ -39,7 +39,8 @@ Current examples:
 - `app/config.py`: `AppConfig` owns typed runtime paths, size limits, history
   limits, retention days, and database path.
 - `app/model_registry.py`: `ModelSpec` and `ResolvedModel` define registry and
-  UI-visible model metadata, including Chinese guidance fields.
+  UI-visible model metadata, including Chinese guidance fields and dropdown group
+  metadata such as `group`, `group_label_zh`, `group_order`, and `sort_order`.
 - `app/inference.py`: `UpscaleRequest`, `UpscaleResult`, and `InferenceError`
   define the request, success, and expected-failure contracts.
 - `app/tasks.py`: `BatchRecord`, `TaskRecord`, and `TaskDeleteResult` define the

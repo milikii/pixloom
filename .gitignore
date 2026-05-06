@@ -33,6 +33,10 @@ node_modules/
 package-lock.json
 
 # Frontend runtime data
+frontend/backend/
+frontend/input/
+frontend/models/
+frontend/output/
 frontend/logs/
 frontend/state/
 

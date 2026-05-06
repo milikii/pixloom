@@ -8,6 +8,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class AppConfig:
     models_dir: Path = Path("models")
+    bundled_models_dir: Path = Path("bundled-models")
     input_dir: Path = Path("input")
     output_dir: Path = Path("output")
     logs_dir: Path = Path("logs")
@@ -55,6 +56,9 @@ def _env_non_negative_int(name: str, default: int) -> int:
 def load_config() -> AppConfig:
     return AppConfig(
         models_dir=_env_path("PIXLOOM_MODELS_DIR", "models"),
+        bundled_models_dir=_env_path(
+            "PIXLOOM_BUNDLED_MODELS_DIR", "bundled-models"
+        ),
         input_dir=_env_path("PIXLOOM_INPUT_DIR", "input"),
         output_dir=_env_path("PIXLOOM_OUTPUT_DIR", "output"),
         logs_dir=_env_path("PIXLOOM_LOGS_DIR", "logs"),

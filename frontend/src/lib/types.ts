@@ -2,6 +2,10 @@ export interface ResolvedModel {
   id: string;
   display_name: string;
   display_name_zh: string;
+  group: string;
+  group_label_zh: string;
+  group_order: number;
+  sort_order: number;
   backend: string;
   architecture: string;
   scale: number;
