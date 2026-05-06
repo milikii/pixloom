@@ -1,121 +1,195 @@
 # Pixloom
 
-Pixloom is a self-hosted, single-container, CPU-only image upscaling console for
-NAS use. It is built for "upload, queue, leave it running, come back later", not
-for interactive GPU tinkering.
+Pixloom 是一个面向 NAS 场景的单容器、CPU-only 图片放大控制台。
 
-The product contract is intentionally narrow:
+它的目标很明确：
 
-- one Docker Compose service
-- one external port: `7860`
-- one CPU-only inference stack
-- one SQLite task queue
-- one Chinese-first operator UI
-- one bundled first-boot model pack
+- 用浏览器上传一张或一小批图片
+- 选择一个本地模型
+- 放进后台串行队列慢慢跑
+- 回来看结果、下载结果、查看日志
 
-Pixloom is not ComfyUI, not a workflow graph, not a model downloader, and not a
-GPU image lab.
+它不是 ComfyUI，不是工作流编排器，也不是 GPU 图像实验室。
 
-## What It Does
+## 项目定位
 
-- upload one image or a small batch
-- choose a locally installed model
-- see grouped model guidance before submit
-- run sequential CPU upscaling in the background
-- preview results and download outputs
-- keep tasks, inputs, outputs, and logs on disk
+当前版本的产品边界非常收敛：
 
-## CPU-Only Contract
+- 单容器部署
+- 单端口对外：`7860`
+- 单机 CPU 推理
+- SQLite 任务队列
+- 中文优先操作界面
+- 首次启动自动补齐内置模型
 
-Pixloom is CPU-only by design.
+## CPU-only 说明
 
-- PyTorch is installed from the CPU wheel index in the image
-- ONNX models run through `CPUExecutionProvider`
-- face restoration is forced to CPU
-- `/api/health` reports `"runtime": "cpu-only"`
+Pixloom 当前明确是 `CPU-only` 项目。
 
-There is no CUDA, ROCm, Vulkan, ncnn, or mixed CPU/GPU mode in the current
-release.
+- 镜像内安装的是 PyTorch CPU 轮子
+- ONNX 只走 `CPUExecutionProvider`
+- 人脸修复模型也只在 CPU 上运行
+- `/api/health` 会返回 `"runtime": "cpu-only"`
 
-## Runtime Shape
+当前没有以下能力：
+
+- CUDA
+- ROCm
+- Vulkan / ncnn
+- 混合 CPU/GPU 推理
+
+## 直接使用已上传镜像
+
+当前已上传的镜像仓库：
 
 ```text
-browser
-  -> http://NAS:7860
-     -> FastAPI
-        -> static React/Next.js export
-        -> /api/*
-        -> in-process worker
-        -> SQLite queue
-        -> CPU-only inference
-        -> /data models/input/output/logs/state
+alexisks/pixloom:latest
 ```
 
-## Quick Start
+如果只是部署，不需要本地 build，直接拉这个镜像即可。
+
+## 目录挂载约定
+
+建议在宿主机准备一个数据目录，例如：
+
+```text
+/srv/pixloom/
+├── models/
+├── input/
+├── output/
+├── logs/
+└── state/
+```
+
+这几个目录的含义：
+
+- `models/`：运行时模型目录
+- `input/`：上传原图
+- `output/`：放大结果
+- `logs/`：JSONL 请求日志
+- `state/`：SQLite 任务库
+
+容器内固定使用：
+
+```text
+/data/models
+/data/input
+/data/output
+/data/logs
+/data/state/pixloom.sqlite3
+```
+
+## Docker Compose 部署
+
+推荐部署方式：
+
+```yaml
+services:
+  pixloom:
+    image: alexisks/pixloom:latest
+    container_name: pixloom
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      PIXLOOM_BUNDLED_MODELS_DIR: /app/bundled-models
+      PIXLOOM_MODELS_DIR: /data/models
+      PIXLOOM_INPUT_DIR: /data/input
+      PIXLOOM_OUTPUT_DIR: /data/output
+      PIXLOOM_LOGS_DIR: /data/logs
+      PIXLOOM_DB_PATH: /data/state/pixloom.sqlite3
+      PIXLOOM_MAX_INPUT_SIDE: 2048
+      PIXLOOM_MAX_OUTPUT_SIDE: 8192
+      PIXLOOM_MAX_UPLOAD_BYTES: 26214400
+      PIXLOOM_TILE_SIZE: 256
+      PIXLOOM_TILE_OVERLAP: 16
+      PIXLOOM_HISTORY_LIMIT: 60
+      PIXLOOM_HISTORY_RETENTION_DAYS: 0
+    volumes:
+      - /srv/pixloom/models:/data/models
+      - /srv/pixloom/input:/data/input
+      - /srv/pixloom/output:/data/output
+      - /srv/pixloom/logs:/data/logs
+      - /srv/pixloom/state:/data/state
+```
+
+启动：
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-Open:
+查看状态：
 
-```text
-http://<your-nas-ip>:7860
+```bash
+docker compose ps
+docker compose logs -f --tail=120 pixloom
 ```
 
-## Data And Storage
+## docker run 部署
 
-Runtime storage lives in the repo root and is mounted into `/data` in the
-container:
+如果你不想写 `compose.yml`，可以直接这样启动：
 
-- `models/` -> `/data/models`
-- `input/` -> `/data/input`
-- `output/` -> `/data/output`
-- `logs/` -> `/data/logs`
-- `state/` -> `/data/state`
-
-SQLite task state lives in:
-
-```text
-state/pixloom.sqlite3
+```bash
+docker run -d \
+  --name pixloom \
+  --restart unless-stopped \
+  -p 7860:7860 \
+  -e PIXLOOM_BUNDLED_MODELS_DIR=/app/bundled-models \
+  -e PIXLOOM_MODELS_DIR=/data/models \
+  -e PIXLOOM_INPUT_DIR=/data/input \
+  -e PIXLOOM_OUTPUT_DIR=/data/output \
+  -e PIXLOOM_LOGS_DIR=/data/logs \
+  -e PIXLOOM_DB_PATH=/data/state/pixloom.sqlite3 \
+  -e PIXLOOM_MAX_INPUT_SIDE=2048 \
+  -e PIXLOOM_MAX_OUTPUT_SIDE=8192 \
+  -e PIXLOOM_MAX_UPLOAD_BYTES=26214400 \
+  -e PIXLOOM_TILE_SIZE=256 \
+  -e PIXLOOM_TILE_OVERLAP=16 \
+  -e PIXLOOM_HISTORY_LIMIT=60 \
+  -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
+  -v /srv/pixloom/models:/data/models \
+  -v /srv/pixloom/input:/data/input \
+  -v /srv/pixloom/output:/data/output \
+  -v /srv/pixloom/logs:/data/logs \
+  -v /srv/pixloom/state:/data/state \
+  alexisks/pixloom:latest
 ```
 
-Task statuses:
+停止和删除：
 
-```text
-queued
-running
-completed
-failed
-deleted
-interrupted
+```bash
+docker stop pixloom
+docker rm pixloom
 ```
 
-## Bundled Models
+## 首次启动的模型行为
 
-The image contains a bundled model pack under:
+镜像里自带一套内置模型，位置是：
 
 ```text
 /app/bundled-models
 ```
 
-On startup, Pixloom copies any missing bundled files into the runtime
-`/data/models` directory.
+启动时，Pixloom 会把“运行目录里缺失的模型文件”自动复制到：
 
-Rules:
+```text
+/data/models
+```
 
-- bundled files seed first boot
-- runtime files remain the source of truth after boot
-- existing runtime files are never overwritten
-- manual replacements in `models/` keep winning
+规则是：
 
-This means a fresh empty `/data` mount still starts with a usable model set.
+- 首次空目录启动时，会自动补齐模型
+- 已存在的运行时模型文件不会被覆盖
+- 你后续手动替换 `/data/models` 里的模型，始终以你自己的文件为准
 
-## Model Selection
+也就是说，空白数据目录也能“开箱即用”。
 
-The dropdown is grouped by use case, not by architecture jargon.
+## 模型选择逻辑
 
-Current groups:
+界面里的模型按用途分组，不按论文名字分组。
+
+当前分组：
 
 - `照片主力`
 - `照片高质量慢跑`
@@ -124,19 +198,15 @@ Current groups:
 - `快速试跑`
 - `经典旧将`
 
-Stars show recommended priority inside the current group:
+每个模型后面会显示星级，表示它在当前组里的推荐优先级：
 
-- `★★★★★` first pick
-- `★★★★☆` strong fallback
-- `★★★☆☆` utility / baseline / smoke test
-- `★★☆☆☆` slow specialist
-- `★☆☆☆☆` experiment only
+- `★★★★★`：当前组第一推荐
+- `★★★★☆`：强力备选
+- `★★★☆☆`：通用/兜底/试跑
+- `★★☆☆☆`：慢速专项
+- `★☆☆☆☆`：实验用途
 
-The UI does not hide the fact that some models are old. Old but still useful
-weights stay visible under `经典旧将` instead of being mixed into the mainline
-recommendations.
-
-## Current Operator Set
+## 当前默认可见模型
 
 ### 照片主力
 
@@ -169,18 +239,9 @@ recommendations.
 - `照片通用 - Real-ESRGAN 4x` `★★★☆☆`
 - `锐化插画 - 4x UltraSharp` `★★★★☆`
 
-## Installed Evaluation Pool
+## 输出尺寸规则
 
-These models can be installed and bundled but are currently hidden from the main
-operator dropdown:
-
-- `DAT 4x` `★☆☆☆☆`
-- `OmniSR 4x DF2K` `★☆☆☆☆`
-- `OmniSR X4 DIV2K` `★☆☆☆☆`
-
-## Output Size Rules
-
-Available presets:
+当前可选：
 
 ```text
 native
@@ -189,33 +250,26 @@ native
 8k
 ```
 
-Meaning:
+含义：
 
-- `native`: model's own scale
-- `2k`: final longest side `2048px`
-- `4k`: final longest side `4096px`
-- `8k`: final longest side `8192px`
+- `native`：按模型原始倍率输出
+- `2k`：最终最长边 `2048px`
+- `4k`：最终最长边 `4096px`
+- `8k`：最终最长边 `8192px`
 
-Important:
+注意：
 
-- Pixloom preserves aspect ratio
-- Pixloom does not crop to a fixed canvas
-- Pixloom does not promise new real detail just because the target is bigger
-- Pixloom does not use chained `2K -> 4K -> 8K` multi-pass upscaling by default
+- 只保留长宽比，不裁切
+- `8K` 只是最终目标尺寸，不代表凭空增加真实细节
+- 当前默认不做 `2K -> 4K -> 8K` 链式多段放大
 
-## API
+## 健康检查
 
-- `GET /api/health`
-- `GET /api/models`
-- `POST /api/upload`
-- `POST /api/batches`
-- `GET /api/tasks`
-- `DELETE /api/tasks/{request_id}`
-- `GET /api/logs/{request_id}`
-- `GET /api/files/input/{path}`
-- `GET /api/files/output/{path}`
+```bash
+curl http://127.0.0.1:7860/api/health
+```
 
-Example health response:
+示例返回：
 
 ```json
 {
@@ -226,28 +280,27 @@ Example health response:
 }
 ```
 
-## Verification
+## 常用运维命令
+
+查看容器日志：
 
 ```bash
-.venv/bin/pytest -q
-cd frontend && npm run lint
-cd frontend && npm run build
-docker compose build
-docker compose up -d
-curl http://127.0.0.1:7860/api/health
+docker logs -f --tail=120 pixloom
 ```
 
-## Logs
-
-Tail container logs:
+查看任务接口：
 
 ```bash
-docker compose logs -f --tail=120 pixloom
+curl http://127.0.0.1:7860/api/tasks
 ```
 
-Request-level audit logs are stored as JSONL under `logs/`.
+查看模型接口：
 
-## Related Docs
+```bash
+curl http://127.0.0.1:7860/api/models
+```
 
-- Architecture: [docs/ARCHITECTURE.md](/home/projects/pixloom/docs/ARCHITECTURE.md)
-- Full model catalog: [docs/MODEL_CATALOG.md](/home/projects/pixloom/docs/MODEL_CATALOG.md)
+## 相关文档
+
+- 架构说明：[docs/ARCHITECTURE.md](/home/projects/pixloom/docs/ARCHITECTURE.md)
+- 完整模型清单：[docs/MODEL_CATALOG.md](/home/projects/pixloom/docs/MODEL_CATALOG.md)

@@ -1,42 +1,73 @@
 # Pixloom
 
-Pixloom is a single-container, CPU-only image upscaling console for NAS use.
+Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
 
-What you get in this image:
+这个镜像里包含：
 
-- FastAPI backend
-- static React/Next.js frontend
-- SQLite task queue
-- bundled first-boot model pack
-- Chinese-first operator UI
+- FastAPI 后端
+- 静态导出的 React/Next.js 前端
+- SQLite 任务队列
+- 首次启动可自动落盘的内置模型包
+- 中文优先操作界面
 
-What you do **not** get:
+这个镜像里不包含：
 
-- GPU support
-- ComfyUI-style graph workflows
-- model downloader
-- public auth layer
+- GPU 支持
+- ComfyUI 式工作流图
+- 自动模型下载
+- 对外认证层
 
-## CPU-Only
+## CPU-only
 
-This image is CPU-only.
+本镜像明确是 `CPU-only`：
 
-- PyTorch CPU wheels
-- ONNX CPU provider only
-- no CUDA / ROCm / Vulkan path
+- PyTorch CPU 版本
+- ONNX 只走 CPU provider
+- 没有 CUDA / ROCm / Vulkan
 
-## First Boot
+## 首次启动
 
-The image contains bundled models under `/app/bundled-models`.
+镜像内置模型目录：
 
-On startup, Pixloom copies any missing bundled files into the runtime
-`/data/models` directory. Existing runtime files are never overwritten.
+```text
+/app/bundled-models
+```
 
-## Quick Run
+容器启动时，会把运行目录里缺失的模型文件自动复制到：
+
+```text
+/data/models
+```
+
+已存在的运行时模型不会被覆盖。
+
+## 目录挂载
+
+建议宿主机准备一个统一数据目录，例如：
+
+```text
+/srv/pixloom/
+├── models/
+├── input/
+├── output/
+├── logs/
+└── state/
+```
+
+容器内固定路径：
+
+- `/data/models`
+- `/data/input`
+- `/data/output`
+- `/data/logs`
+- `/data/state/pixloom.sqlite3`
+
+## docker run
 
 ```bash
 docker run -d \
   --name pixloom \
+  --restart unless-stopped \
   -p 7860:7860 \
   -e PIXLOOM_BUNDLED_MODELS_DIR=/app/bundled-models \
   -e PIXLOOM_MODELS_DIR=/data/models \
@@ -44,17 +75,28 @@ docker run -d \
   -e PIXLOOM_OUTPUT_DIR=/data/output \
   -e PIXLOOM_LOGS_DIR=/data/logs \
   -e PIXLOOM_DB_PATH=/data/state/pixloom.sqlite3 \
-  -v /your/path/pixloom-data:/data \
+  -e PIXLOOM_MAX_INPUT_SIDE=2048 \
+  -e PIXLOOM_MAX_OUTPUT_SIDE=8192 \
+  -e PIXLOOM_MAX_UPLOAD_BYTES=26214400 \
+  -e PIXLOOM_TILE_SIZE=256 \
+  -e PIXLOOM_TILE_OVERLAP=16 \
+  -e PIXLOOM_HISTORY_LIMIT=60 \
+  -e PIXLOOM_HISTORY_RETENTION_DAYS=0 \
+  -v /srv/pixloom/models:/data/models \
+  -v /srv/pixloom/input:/data/input \
+  -v /srv/pixloom/output:/data/output \
+  -v /srv/pixloom/logs:/data/logs \
+  -v /srv/pixloom/state:/data/state \
   alexisks/pixloom:latest
 ```
 
-Open:
+打开：
 
 ```text
-http://<host>:7860
+http://<宿主机IP>:7860
 ```
 
-## Docker Compose Example
+## Docker Compose
 
 ```yaml
 services:
@@ -71,44 +113,34 @@ services:
       PIXLOOM_OUTPUT_DIR: /data/output
       PIXLOOM_LOGS_DIR: /data/logs
       PIXLOOM_DB_PATH: /data/state/pixloom.sqlite3
+      PIXLOOM_MAX_INPUT_SIDE: 2048
+      PIXLOOM_MAX_OUTPUT_SIDE: 8192
+      PIXLOOM_MAX_UPLOAD_BYTES: 26214400
+      PIXLOOM_TILE_SIZE: 256
+      PIXLOOM_TILE_OVERLAP: 16
+      PIXLOOM_HISTORY_LIMIT: 60
+      PIXLOOM_HISTORY_RETENTION_DAYS: 0
     volumes:
-      - ./data:/data
+      - /srv/pixloom/models:/data/models
+      - /srv/pixloom/input:/data/input
+      - /srv/pixloom/output:/data/output
+      - /srv/pixloom/logs:/data/logs
+      - /srv/pixloom/state:/data/state
 ```
 
-## Storage
+启动：
 
-Runtime storage layout:
+```bash
+docker compose up -d
+```
 
-- `/data/models`
-- `/data/input`
-- `/data/output`
-- `/data/logs`
-- `/data/state/pixloom.sqlite3`
+## 健康检查
 
-## Model Groups
+```bash
+curl http://127.0.0.1:7860/api/health
+```
 
-The UI groups models by operator intent:
-
-- `照片主力`
-- `照片高质量慢跑`
-- `动漫/线稿`
-- `人脸修复`
-- `快速试跑`
-- `经典旧将`
-
-Stars indicate priority inside the current group:
-
-- `★★★★★` first pick
-- `★★★★☆` strong fallback
-- `★★★☆☆` utility / baseline
-- `★★☆☆☆` slow specialist
-- `★☆☆☆☆` experiment only
-
-## Health
-
-`GET /api/health`
-
-Example:
+示例：
 
 ```json
 {
@@ -119,9 +151,8 @@ Example:
 }
 ```
 
-## Notes
+## 说明
 
-- 8K is a final longest-side target, not a chained multi-pass upscale mode
-- this image is large because it includes bundled models
-- if you already have your own preferred weights, mount them into `/data/models`
-  and they will override the bundled seed set
+- 当前 `8K` 只是最终最长边目标，不是多段链式放大
+- 镜像体积较大，因为内置了模型包
+- 如果你自己挂载了 `/data/models`，运行时目录始终优先生效
