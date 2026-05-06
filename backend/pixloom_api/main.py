@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.bundled_models import sync_bundled_models
 from app.config import load_config
 from app.tasks import initialize_task_store, mark_running_tasks_interrupted
 
@@ -28,6 +29,7 @@ from backend.worker.daemon import BackgroundTaskWorker
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     config = load_config()
     config.ensure_directories()
+    sync_bundled_models(config)
     initialize_task_store(config)
     mark_running_tasks_interrupted(config)
 

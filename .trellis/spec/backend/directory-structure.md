@@ -20,6 +20,7 @@ Do not create extra layers just to look "enterprise".
 ```text
 app/
 ├── config.py           # Environment-driven runtime configuration
+├── bundled_models.py   # Optional bundled model sync into runtime models/
 ├── history.py          # Filesystem-backed history listing, deletion, retention cleanup
 ├── inference.py        # Validation, persistence, orchestration, error contract
 ├── model_inventory.py  # Local model file inventory with SHA256 and exposure tracking
@@ -52,6 +53,7 @@ tests/
 
 - Keep HTTP request/response shaping in `backend/pixloom_api/routers/`.
 - Keep environment parsing in `app/config.py`.
+- Keep first-boot bundled model sync in `app/bundled_models.py`.
 - Keep history listing, history deletion, and retention cleanup in `app/history.py`.
 - Keep request validation, file persistence, and request lifecycle orchestration in
   `app/inference.py`.

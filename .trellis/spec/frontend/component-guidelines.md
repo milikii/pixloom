@@ -65,6 +65,9 @@ logs.
   `display_name_zh`, `recommended_for_zh`, `warning_zh`, `speed_zh`,
   `style_zh`, `stability_zh`. These feed the model dropdown and guidance
   block; never leave them empty for an operator-visible model.
+- Operator-visible models should also carry dropdown grouping fields so the
+  picker can render grouped sections such as `照片主力`, `动漫/线稿`, or
+  `人脸修复` instead of one flat undifferentiated list.
 - Status and error boxes should include request id when relevant.
 - Task list must show status labels for queued/running/completed/failed/deleted/
   interrupted rows.

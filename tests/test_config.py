@@ -9,6 +9,7 @@ from app.config import AppConfig, load_config
 
 def test_load_config_uses_defaults(monkeypatch):
     monkeypatch.delenv("PIXLOOM_MODELS_DIR", raising=False)
+    monkeypatch.delenv("PIXLOOM_BUNDLED_MODELS_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_INPUT_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_OUTPUT_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_LOGS_DIR", raising=False)
@@ -24,6 +25,7 @@ def test_load_config_uses_defaults(monkeypatch):
     config = load_config()
 
     assert config.models_dir == Path("models")
+    assert config.bundled_models_dir == Path("bundled-models")
     assert config.input_dir == Path("input")
     assert config.output_dir == Path("output")
     assert config.logs_dir == Path("logs")
@@ -39,6 +41,7 @@ def test_load_config_uses_defaults(monkeypatch):
 
 def test_load_config_reads_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("PIXLOOM_MODELS_DIR", str(tmp_path / "m"))
+    monkeypatch.setenv("PIXLOOM_BUNDLED_MODELS_DIR", str(tmp_path / "bm"))
     monkeypatch.setenv("PIXLOOM_INPUT_DIR", str(tmp_path / "i"))
     monkeypatch.setenv("PIXLOOM_OUTPUT_DIR", str(tmp_path / "o"))
     monkeypatch.setenv("PIXLOOM_LOGS_DIR", str(tmp_path / "l"))
@@ -54,6 +57,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     config = load_config()
 
     assert config.models_dir == tmp_path / "m"
+    assert config.bundled_models_dir == tmp_path / "bm"
     assert config.input_dir == tmp_path / "i"
     assert config.output_dir == tmp_path / "o"
     assert config.logs_dir == tmp_path / "l"
@@ -70,6 +74,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
 def test_app_config_ensures_directories(tmp_path):
     config = AppConfig(
         models_dir=tmp_path / "models",
+        bundled_models_dir=tmp_path / "bundled-models",
         input_dir=tmp_path / "input",
         output_dir=tmp_path / "output",
         logs_dir=tmp_path / "logs",

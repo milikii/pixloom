@@ -77,7 +77,7 @@ Current operator-facing behavior:
 
 Runtime data is persisted in:
 
-- `models/`: model files placed manually
+- `models/`: runtime model files used by the app
 - `input/`: uploaded source images
 - `output/`: generated upscaled images
 - `logs/`: JSONL request audit trail
@@ -124,53 +124,68 @@ promise extra real detail beyond what the selected model can reconstruct.
 
 ## Model Files
 
-Pixloom does not download models automatically. Place model files in `models/`
-with these names:
+Pixloom now supports a bundled model pack for first boot. The Docker image can
+ship a curated baseline set under `/app/bundled-models`, and app startup copies
+only missing files into the runtime `models/` directory. Existing runtime files
+always win; startup never overwrites a model you already replaced locally.
+
+The runtime `models/` directory still remains the source of truth after boot.
+Manual additions and replacements continue to work there.
+
+Current expected filenames:
 
 ```text
+models/SPAN_pretrain.pth
+models/RealPLKSR_4x.pth
+models/4x_NMKD-Siax_200k.pth
 models/RealESRGAN_x4plus.pth
 models/RealESRGAN_x4plus_anime_6B.pth
 models/realesr-general-x4v3.pth
 models/4x-UltraSharp.pth
 models/4x_foolhardy_Remacri.pth
 models/HAT-L-4x.pth
+models/DAT2_4x_pretrain.pth
+models/OmniSR_4x_DF2K.pth
+models/OmniSR_X4_DIV2K.safetensors
+models/APISR_4x_int8.onnx
 models/up3x-latest-denoise3x.pth
+models/codeformer.pth
+models/GFPGANv1.4.pth
+models/facelib/detection_Resnet50_Final.pth
+models/facelib/parsing_parsenet.pth
 ```
 
 Only models that are both locally present and marked for operator exposure appear in
-the primary WebUI dropdown. Downloaded-but-unapproved evaluation models may exist on
+the primary WebUI dropdown. Installed-but-unapproved evaluation models may exist on
 disk without being shown in the default submission flow.
 
 Recommended operator choices:
 
-- `照片自然 - 4x Remacri`: default candidate for real photos and portraits after
-  the model file is locally accepted.
-- `照片通用 - Real-ESRGAN 4x`: stable official photo baseline.
-- `锐化插画 - 4x UltraSharp`: sharp style for AI images, compressed web images,
-  and crisp illustrations.
-- `动漫插画 - Real-ESRGAN Anime 6B`: anime, illustration, line art, and flat-color
-  images.
+- `SPAN 4x`: default daily photo/general choice for CPU NAS use
+- `RealPLKSR 4x`: newer photo/detail-focused mainline alternative
+- `照片修复 - 4x NMKD-Siax`: noisy or compressed real-photo recovery
+- `APISR 4x`: main anime/compressed-line restoration choice
+- `动漫修复 - Real-CUGAN 3x 去噪`: Bilibili-origin anime denoise specialist
+- `动漫插画 - Real-ESRGAN Anime 6B`: light anime fallback
+- `CodeFormer` / `GFPGAN v1.4`: face restoration
 - `快速试跑 - Real-ESRGAN General v3`: quick smoke tests for upload, queue, and
-  output path behavior.
+  output path behavior
 - `质量上限 - HAT-L 4x`: slow CPU path for small batches when detail ceiling matters
-  more than latency.
-- `动漫修复 - Real-CUGAN 3x 去噪`: anime/manga-focused 3x denoise option for
-  compressed line art and animation frames.
+  more than latency
 
 Current runtime exposure rule:
 
-- `照片自然 - 4x Remacri`
-- `照片通用 - Real-ESRGAN 4x`
-- `锐化插画 - 4x UltraSharp`
-- `动漫插画 - Real-ESRGAN Anime 6B`
-- `快速试跑 - Real-ESRGAN General v3`
-- `质量上限 - HAT-L 4x`
-- `动漫修复 - Real-CUGAN 3x 去噪`
+- `照片主力`: `SPAN 4x`, `RealPLKSR 4x`, `4x NMKD-Siax`, `Real-ESRGAN 4x`
+- `照片高质量慢跑`: `HAT-L 4x`
+- `动漫/线稿`: `APISR 4x`, `Real-CUGAN 3x 去噪`, `Real-ESRGAN Anime 6B`
+- `人脸修复`: `CodeFormer`, `GFPGAN v1.4`
+- `快速试跑`: `Real-ESRGAN General v3`
+- `经典旧将`: `Real-ESRGAN 4x`, `Remacri`, `UltraSharp`
 
-Additional downloaded models remain in the local evaluation pool until they are
-explicitly promoted. If local model files exist but none are yet accepted for daily
-use, the UI shows a Chinese-first message explaining that the models are present but
-not yet opened to normal operators.
+Older classic models can stay visible as a separate last group instead of being
+mixed into the main daily-use recommendations. If local model files exist but none
+are yet accepted for daily use, the UI shows a Chinese-first message explaining
+that the models are present but not yet opened to normal operators.
 
 The model guidance panel shows best fit, style, CPU speed class, local acceptance
 status, and a warning before the operator submits a task.
@@ -320,7 +335,8 @@ becomes a deliberate product decision.
 
 ## Manual Acceptance Test
 
-Record one real NAS test after placing at least one model in `models/`:
+Record one real NAS test after confirming the bundled models or runtime `models/`
+directory contain at least one operator-visible model:
 
 ```text
 Date: 2026-04-30

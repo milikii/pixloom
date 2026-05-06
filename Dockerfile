@@ -18,6 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIXLOOM_FRONTEND_DIST=/app/frontend-out
+ENV PIXLOOM_BUNDLED_MODELS_DIR=/app/bundled-models
 
 WORKDIR /app
 
@@ -32,6 +33,7 @@ RUN pip install --upgrade pip \
 
 COPY app /app/app
 COPY backend /app/backend
+COPY models /app/bundled-models
 COPY --from=frontend-builder /build/frontend/out /app/frontend-out
 
 EXPOSE 7860

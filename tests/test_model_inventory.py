@@ -24,7 +24,9 @@ def test_build_model_inventory_marks_operator_and_evaluation_files(tmp_path):
 
     assert by_name[anime.name].operator_visible is True
     assert by_name[anime.name].exposure == "operator"
+    assert by_name[anime.name].display_name_zh == "动漫插画 - Real-ESRGAN Anime 6B"
     assert by_name[general.name].operator_visible is True
+    assert by_name[general.name].display_name_zh == "快速试跑 - Real-ESRGAN General v3"
     assert by_name[remacri.name].operator_visible is True
     assert by_name[remacri.name].exposure == "operator"
     assert by_name[span.name].operator_visible is True

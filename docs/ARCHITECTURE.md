@@ -60,6 +60,7 @@ repo/
     src/
     package.json
     next.config.ts
+  bundled-models/
   models/
   input/
   output/
@@ -75,6 +76,9 @@ Pixloom keeps image artifacts on the filesystem and stores task state in SQLite.
 - Successful upscaled images are persisted under `output/`.
 - Request audit events are appended under `logs/`.
 - Task and batch rows are stored under `state/pixloom.sqlite3` by default.
+- Optional image-model defaults can be baked into the image under
+  `bundled-models/` and copied into `models/` on startup only when the runtime
+  file is missing.
 - Failed requests roll back output files created by that request when possible.
 - The task list is rebuilt from SQLite task rows through `/api/tasks`.
 - Deleting a task deletes linked input/output files when those paths are safely
@@ -165,7 +169,8 @@ canvas, and output remains bounded by `PIXLOOM_MAX_OUTPUT_SIDE`.
   installs PyTorch from the CPU wheel index explicitly.
 - The model registry supports `spandrel`, `onnxruntime`, and `custom` backend
   entries. Unsupported future backends must stay hidden from the operator dropdown.
-- Manual model placement in `models/`; no automatic downloader.
+- No automatic downloader. Models are either shipped in the image as a bundled
+  baseline pack or placed manually into `models/`.
 - CPU tiled inference is required for NAS memory safety.
 
 ## API Surface
