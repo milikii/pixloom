@@ -38,8 +38,16 @@ RUN pip install --upgrade pip \
 
 COPY app /app/app
 COPY backend /app/backend
-COPY models /app/bundled-models
+RUN mkdir -p /app/bundled-models
+COPY models/APISR_4x_int8.onnx models/realesr-general-x4v3.pth models/up2x-latest-denoise3x.pth models/up3x-latest-denoise3x.pth models/SPAN_pretrain.pth models/RealESRGAN_x4plus_anime_6B.pth models/RealPLKSR_4x.pth models/4x-UltraSharp.pth models/4x_NMKD-Siax_200k.pth models/4x_foolhardy_Remacri.pth models/RealESRGAN_x4plus.pth /app/bundled-models/
+COPY models/DAT2_4x_pretrain.pth models/HAT-L-4x.pth /app/bundled-models/
+COPY models/DRCT_X4.pth /app/bundled-models/
+COPY models/DRCT-L_X4.pth /app/bundled-models/
+COPY models/GFPGANv1.4.pth /app/bundled-models/
+COPY models/codeformer.pth /app/bundled-models/
+COPY models/facelib /app/bundled-models/facelib
 COPY --from=frontend-builder /build/frontend/out /app/frontend-out
+RUN mkdir -p /data
 
 EXPOSE 7860
 
