@@ -24,8 +24,4 @@ services:
       PIXLOOM_HISTORY_LIMIT: "${PIXLOOM_HISTORY_LIMIT:-60}"
       PIXLOOM_HISTORY_RETENTION_DAYS: "${PIXLOOM_HISTORY_RETENTION_DAYS:-0}"
     volumes:
-      - ./models:/data/models
-      - ./input:/data/input
-      - ./output:/data/output
-      - ./logs:/data/logs
-      - ./state:/data/state
+      - ./data:/data

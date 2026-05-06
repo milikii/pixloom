@@ -21,6 +21,7 @@ Star meaning:
 | `4x-nmkd-siax-200k` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `照片修复 - 4x NMKD-Siax` |
 | `4x-ultrasharp` | yes | 照片主力 | `★★★★☆` | `spandrel` | 4 | `锐化插画 - 4x UltraSharp` |
 | `hat-l-4x` | yes | 照片高质量慢跑 | `★★☆☆☆` | `spandrel` | 4 | `质量上限 - HAT-L 4x` |
+| `dat2-4x-pretrain` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `DAT2 4x 预训练版` |
 | `apisr-4x-int8` | yes | 动漫/线稿 | `★★★★★` | `onnxruntime` | 4 | `APISR 4x` |
 | `real-cugan-up3x-denoise3x` | yes | 动漫/线稿 | `★★★★★` | `spandrel` | 3 | `动漫修复 - Real-CUGAN 3x 去噪` |
 | `realesrgan-x4plus-anime` | yes | 动漫/线稿 | `★★★★☆` | `spandrel` | 4 | `动漫插画 - Real-ESRGAN Anime 6B` |
@@ -29,9 +30,6 @@ Star meaning:
 | `realesr-general-x4v3` | yes | 快速试跑 | `★★★☆☆` | `spandrel` | 4 | `快速试跑 - Real-ESRGAN General v3` |
 | `4x-remacri` | yes | 经典旧将 | `★★★★☆` | `spandrel` | 4 | `照片自然 - 4x Remacri` |
 | `realesrgan-x4plus` | yes | 经典旧将 | `★★★☆☆` | `spandrel` | 4 | `照片通用 - Real-ESRGAN 4x` |
-| `dat2-4x-pretrain` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `DAT2 4x 预训练版` |
-| `omnisr-4x-df2k` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `OmniSR 4x DF2K` |
-| `omnisr-x4-div2k` | no | 照片高质量慢跑 | `★☆☆☆☆` | `spandrel` | 4 | `OmniSR X4 DIV2K` |
 
 ## Detailed Notes
 
@@ -188,25 +186,3 @@ Star meaning:
 - Best fit: 实验模型，只适合做少量对比测试，不适合作为 DAT 系列的正式画质代表。
 - Warning: 这是 pretrain 预训练权重，不是社区常用的 fine-tuned 成品版；画质判断容易失真，CPU 也非常慢。
 - Sharp review: 别把它当 DAT 正式代表。这个 pretrain 版更像研究样本，能跑不等于该拿来做结论；想认真评 DAT，得换成 fine-tuned 社区版。
-
-### `OmniSR 4x DF2K`
-
-- Visible: no
-- Group: `照片高质量慢跑`
-- Stars: `★☆☆☆☆`
-- Backend: `spandrel`
-- Scale: `4`
-- Best fit: 实验模型，适合极模糊原图的重建对比测试。
-- Warning: 轻量化全向自注意力模型，纯 CPU 偏慢但画质天花板高。
-- Sharp review: 全向自注意力路线。极模糊原图的重建很能打，但当前更适合做研究样本，不适合默认交给手机端操作。
-
-### `OmniSR X4 DIV2K`
-
-- Visible: no
-- Group: `照片高质量慢跑`
-- Stars: `★☆☆☆☆`
-- Backend: `spandrel`
-- Scale: `4`
-- Best fit: 实验模型，适合极模糊原图的重建对比测试。
-- Warning: safetensors 版，CPU 需耐心。
-- Sharp review: 和 DF2K 版定位类似。可以留在本地评估池，但没必要放进默认主流程。
