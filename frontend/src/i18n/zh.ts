@@ -23,7 +23,7 @@ export const zh = {
     output: {
       eyebrow: "输出",
       title: "输出尺寸与保存",
-      copy: "先选最终最长边，再选保存格式。原始模式会按模型自己的倍率输出。",
+      copy: "先选最终最长边，再选保存格式。JPG / WEBP 质量固定 100，原始模式会按模型自己的倍率输出。",
     },
     receipt: {
       eyebrow: "回执",

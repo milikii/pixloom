@@ -13,6 +13,7 @@ from app.output_size import (
     NATIVE_OUTPUT_SIZE_PRESET,
     normalize_output_size_preset,
 )
+from app.output_quality import FIXED_OUTPUT_QUALITY, normalize_output_quality
 from app.tasks import QueuedTaskInput, create_batch_with_tasks, build_batch_id
 from app.request_logging import build_request_id, read_request_log_excerpt
 from app.model_registry import list_available_models
@@ -25,7 +26,7 @@ class BatchCreateRequest(BaseModel):
     stored_paths: list[str]
     model_id: str
     output_format: str
-    quality: int
+    quality: int | None = None
     output_size_preset: str = NATIVE_OUTPUT_SIZE_PRESET
 
 
@@ -56,6 +57,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
         )
 
     batch_id = build_batch_id()
+    fixed_quality = normalize_output_quality(body.quality)
     task_inputs = tuple(
         QueuedTaskInput(
             request_id=build_request_id(),
@@ -63,7 +65,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
             input_path=Path(p),
             model_id=body.model_id,
             output_format=body.output_format,
-            quality=body.quality,
+            quality=fixed_quality,
             output_size_preset=output_size_preset,
         )
         for p in body.stored_paths
@@ -75,7 +77,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
             batch_id=batch_id,
             model_id=body.model_id,
             output_format=body.output_format,
-            quality=body.quality,
+            quality=fixed_quality,
             output_size_preset=output_size_preset,
             tasks=task_inputs,
         )
@@ -110,7 +112,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
                 "output_path": str(r.output_path) if r.output_path else None,
                 "model_id": r.model_id,
                 "output_format": r.output_format,
-                "quality": r.quality,
+                "quality": FIXED_OUTPUT_QUALITY,
                 "output_size_preset": r.output_size_preset,
                 "created_at": r.created_at.isoformat(),
                 "started_at": r.started_at.isoformat() if r.started_at else None,

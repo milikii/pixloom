@@ -348,9 +348,7 @@ export function TaskPanel({
                     {selectedTask.output_size_label || selectedTask.output_size_preset}
                   </span>
                   <span className="text-muted-foreground">保存格式</span>
-                  <span className="text-foreground">
-                    {selectedTask.output_format} · 质量 {selectedTask.quality}
-                  </span>
+                  <span className="text-foreground">{selectedTask.output_format}</span>
                   <span className="text-muted-foreground">耗时</span>
                   <span className="text-foreground">{formatElapsed(selectedTask.elapsed_seconds)}</span>
                   {selectedTask.error_code && (
