@@ -112,4 +112,10 @@ def get_tasks(
 @router.delete("/{request_id}")
 def delete_task_endpoint(request_id: str, config: AppConfig = Depends(get_config)):
     result = delete_task(config, request_id)
-    return {"message_zh": result.message_zh}
+    return {
+        "request_id": result.request_id,
+        "deleted_paths": [str(path) for path in result.deleted_paths],
+        "missing_paths": [str(path) for path in result.missing_paths],
+        "skipped_paths": [str(path) for path in result.skipped_paths],
+        "message_zh": result.message_zh,
+    }

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
+
 from app.config import AppConfig
-from app.tasks import list_tasks
+from app.tasks import claim_queued_task, list_tasks, mark_task_completed
 from backend.pixloom_api.main import create_app
 from backend.pixloom_api.routers import batches, health, models, tasks
 
@@ -54,6 +57,7 @@ def test_batch_endpoint_enqueues_tasks_and_task_endpoint_lists_them(tmp_path):
     assert create_body["queued_count"] == 1
     assert create_body["tasks"][0]["status"] == "queued"
     assert create_body["tasks"][0]["output_size_preset"] == "2k"
+    assert create_body["tasks"][0]["output_size_label"] == "2K 最长边 2048px"
     assert list_tasks(config)[0].status == "queued"
 
     list_body = tasks.get_tasks(limit=5, config=config)
@@ -114,19 +118,60 @@ def test_batch_endpoint_rejects_invalid_output_size_preset(tmp_path):
     input_path = config.input_dir / "source.png"
     input_path.write_bytes(b"fake")
 
+    with pytest.raises(HTTPException) as exc_info:
+        batches.create_batch(
+            batches.BatchCreateRequest(
+                stored_paths=[str(input_path)],
+                model_id="realesrgan-x4plus",
+                output_format="PNG",
+                quality=90,
+                output_size_preset="16k",
+            ),
+            config,
+        )
+
+    detail = exc_info.value.detail
+
+    assert exc_info.value.status_code == 400
+    assert detail["code"] == "OUTPUT_SIZE_PRESET_INVALID"
+    assert detail["request_id"]
+    log_text = next(config.logs_dir.glob("pixloom-*.jsonl")).read_text(encoding="utf-8")
+    assert '"event": "ui_rejected"' in log_text
+
+
+def test_delete_task_endpoint_returns_file_action_details(tmp_path):
+    config = _config(tmp_path)
+    config.ensure_directories()
+    (config.models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
+    input_path = config.input_dir / "source.png"
+    output_path = config.output_dir / "result.png"
+    input_path.write_bytes(b"input")
+    output_path.write_bytes(b"output")
     create_body = batches.create_batch(
         batches.BatchCreateRequest(
             stored_paths=[str(input_path)],
             model_id="realesrgan-x4plus",
             output_format="PNG",
-            quality=90,
-            output_size_preset="16k",
+            output_size_preset="native",
         ),
         config,
     )
+    request_id = create_body["first_request_id"]
+    claim_queued_task(config, request_id)
+    mark_task_completed(
+        config,
+        request_id=request_id,
+        output_path=output_path,
+        elapsed_seconds=1.2,
+    )
 
-    assert create_body["queued_count"] == 0
-    assert "OUTPUT_SIZE_PRESET_INVALID" in create_body["status_message"]
+    body = tasks.delete_task_endpoint(request_id, config=config)
+
+    assert body["request_id"] == request_id
+    assert body["deleted_paths"] == [str(input_path), str(output_path)]
+    assert body["missing_paths"] == []
+    assert body["skipped_paths"] == []
+    assert "已删除任务" in body["message_zh"]
 
 
 def test_create_app_mounts_frontend_static_export(tmp_path, monkeypatch):

@@ -3,6 +3,7 @@ import type {
   BatchCreateResponse,
   LogExcerptResponse,
   ModelListResponse,
+  TaskDeleteResult,
   TaskListResponse,
   UploadResponse,
 } from "./types";
@@ -28,6 +29,9 @@ async function request<T>(
     const body = await res.json().catch(() => null);
     const message =
       body?.detail?.user_message_zh ||
+      (body?.detail?.code && body?.detail?.request_id
+        ? `错误 [${body.detail.code}]，请求编号：${body.detail.request_id}`
+        : "") ||
       body?.detail ||
       `Request failed: ${res.status}`;
     throw new Error(message);
@@ -47,18 +51,22 @@ export const apiClient = {
     return request("/upload", { method: "POST", body: formData });
   },
 
-  createBatch(body: BatchCreateRequest): Promise<BatchCreateResponse> {
-    return request("/batches", {
+  async createBatch(body: BatchCreateRequest): Promise<BatchCreateResponse> {
+    const result = await request<BatchCreateResponse>("/batches", {
       method: "POST",
       body: JSON.stringify(body),
     });
+    if (result.queued_count === 0) {
+      throw new Error(result.status_message || "批次创建失败，请检查后重试。");
+    }
+    return result;
   },
 
   getTasks(limit = 60): Promise<TaskListResponse> {
     return request(`/tasks?limit=${limit}`);
   },
 
-  deleteTask(requestId: string): Promise<{ message_zh: string }> {
+  deleteTask(requestId: string): Promise<TaskDeleteResult> {
     return request(`/tasks/${requestId}`, { method: "DELETE" });
   },
 

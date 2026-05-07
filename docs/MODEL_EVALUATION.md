@@ -1,6 +1,6 @@
 # Pixloom Model Evaluation
 
-Last updated: 2026-05-06
+Last updated: 2026-05-08
 
 Hardware target: Intel Core i7-8700, 6 cores / 12 threads, 32 GB RAM, 1 TB SSD,
 CPU-only Docker runtime.
@@ -28,15 +28,15 @@ Runtime rule:
 
 ## Recommended Operator Set
 
-UI ordering should stay conservative for CPU-only NAS usage:
+The current UI intentionally keeps every usable local model visible, grouped by
+operator intent:
 
-1. natural photo default
-2. stable photo baseline
-3. sharp illustration / AI-art style
-4. anime / line-art baseline
-5. fast smoke test
-6. slow quality-ceiling option
-7. anime denoise specialist
+1. photo main models: SPAN, RealPLKSR, NMKD-Siax, UltraSharp
+2. slow quality-ceiling models: DRCT, HAT-L, DRCT-L
+3. anime / line-art models: APISR, Real-CUGAN 3x, Real-CUGAN 2x, Anime 6B
+4. face restoration models: CodeFormer, GFPGAN
+5. fast smoke test: Real-ESRGAN General v3
+6. classic legacy baselines: Remacri, Real-ESRGAN 4x
 
 Each UI entry must expose style, speed class, local acceptance status, and one
 operator warning before submission.
@@ -104,12 +104,12 @@ As of 2026-05-01, the local `models/` directory currently contains:
 | `up2x-latest-denoise3x.pth` | `5147249` bytes | `0a14739f3f5fcbd74ec3ce2806d13a47916c916b20afe4a39d95f6df4ca6abd8` | operator-visible |
 | `up3x-latest-denoise3x.pth` | `5154161` bytes | `39f1e6e90d50e5528a63f4ba1866bad23365a737cbea22a80769b2ec4c1c3285` | operator-visible |
 
-If the accepted set is smaller than the ideal five-slot ordering, the primary
-dropdown should shrink to the trusted subset rather than show unaccepted placeholders.
+If a future local file is installed but not accepted, the primary dropdown should
+continue to hide it until `app/model_registry.py` marks it as `exposure="operator"`.
 
-The remaining non-operator files above are tracked as evaluation-only local assets.
-They are present on disk and represented in code/docs, but they remain outside the
-main submission flow until explicitly accepted.
+The remaining non-operator file above is `DAT2_4x_pretrain.pth`. It is present on
+disk and represented in code/docs, but remains outside the main submission flow
+because the pretrain weight is not a trustworthy DAT launch recommendation.
 
 ## Local Runtime Smoke Results (2026-05-01)
 
@@ -244,7 +244,7 @@ Tradeoff: lower quality ceiling than heavier models.
 ### Additional Downloaded Files Pending Integration
 
 **4x_NMKD-Siax_200k**
-Status: `installed`, pending registry/integration decision
+Status: `installed`, `tested`, `accepted`
 Current file: `models/4x_NMKD-Siax_200k.pth`
 Purpose: stronger handling of compressed or noisy real-world images
 
@@ -254,7 +254,7 @@ Local runtime note (2026-05-01):
   final subjective quality decision
 
 **SPAN 4x pretrain**
-Status: `installed`, pending registry/integration decision
+Status: `installed`, `tested`, `accepted`
 Current file: `models/SPAN_pretrain.pth`
 Purpose: representative lightweight SPAN-family evaluation weight
 
@@ -264,10 +264,10 @@ Local runtime note (2026-05-01):
   final subjective quality decision
 
 **RealPLKSR 4x**
-Status: `installed`, pending local acceptance
+Status: `installed`, `tested`, `accepted`
 Current file: `models/RealPLKSR_4x.pth`
 Purpose: lightweight photo/general upscaling candidate already represented by the
-disabled `realplksr-4x` registry entry
+operator-visible `realplksr-4x` registry entry
 
 Local runtime note (2026-05-01):
 - current Pixloom runtime successfully produced `output/20260501-124224-385938_1777260396442_realplksr-4x_4x.png`
@@ -275,7 +275,7 @@ Local runtime note (2026-05-01):
   final subjective quality decision
 
 **DAT2 4x pretrain**
-Status: `installed`, pending registry/integration decision
+Status: `installed`, `tested`, evaluation-only
 Current file: `models/DAT2_4x_pretrain.pth`
 Purpose: representative DAT-family quality-ceiling evaluation weight
 
@@ -286,12 +286,12 @@ Local runtime note (2026-05-01):
   long-run candidate rather than a fast interactive acceptance step
 
 **CodeFormer**
-Status: `installed`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Current file: `models/codeformer.pth`
 Purpose: face restoration with adjustable fidelity
 
 **GFPGAN v1.4**
-Status: `installed`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Current file: `models/GFPGANv1.4.pth`
 Purpose: faster face restoration baseline
 
@@ -307,13 +307,13 @@ Current note:
 - keep the 3x scale warning visible so operators do not confuse it with the 4x set
 
 **APISR 4x int8 ONNX**
-Status: `installed`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Current file: `models/APISR_4x_int8.onnx`
 Purpose: APISR-family anime restoration evaluation weight in ONNX form
 
 **OmniSR 4x DF2K**
-Status: `installed`, pending registry/integration decision
-Current file: `models/OmniSR_4x_DF2K.pth`
+Status: not currently installed or represented in the runtime registry
+Expected candidate file name: `models/OmniSR_4x_DF2K.pth`
 Purpose: lightweight Omni-SR evaluation weight sourced from the DF2K release
 
 Current note:
@@ -321,8 +321,8 @@ Current note:
   near-term promotion
 
 **OmniSR X4 DIV2K safetensors**
-Status: `installed`, pending registry/integration decision
-Current file: `models/OmniSR_X4_DIV2K.safetensors`
+Status: not currently installed or represented in the runtime registry
+Expected candidate file name: `models/OmniSR_X4_DIV2K.safetensors`
 Purpose: alternate Omni-SR weight in safetensors format for local inspection
 
 **HAT-L 4x**
@@ -339,15 +339,15 @@ Current note:
 ### Anime And Line Preservation
 
 **APISR**
-Status: `manual-source`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Purpose: anime production-style image/video restoration
 
 Why test it: APISR is specifically designed around anime production artifacts, including
 distorted hand-drawn lines and color artifacts. It is a strong candidate for old anime
 stills, compressed anime screenshots, and line-sensitive material.
 
-Risk: APISR is not a drop-in Spandrel model entry. It ships its own inference code and
-model zoo, so it should be evaluated as a separate anime restoration backend.
+Risk: APISR runs through the ONNX Runtime path, not Spandrel. Keep it in the anime
+group and do not treat it as a general photo model.
 
 **Real-CUGAN**
 Status: `manual-source`, `tested`, `accepted`
@@ -362,21 +362,23 @@ set. Keep reminding users that this entry is a 3x specialist, not a 4x general m
 ### Lightweight Newer Candidates
 
 **SPAN**
-Status: `manual-source`, planned compatibility test
+Status: `installed`, `tested`, `accepted`
 Purpose: faster general/anime/AI-art super-resolution
 
 Why test it: newer lightweight architecture that may fit CPU better than heavy
 Transformer models.
 
-Risk: the exact `.pth` file must match a Spandrel-supported architecture and scale.
+Risk: the current `SPAN_pretrain.pth` file is accepted for the visible set; future
+SPAN-family replacements still need file/source compatibility checks before swapping.
 
 **RealPLKSR**
-Status: `manual-source`, planned compatibility test
+Status: `installed`, `tested`, `accepted`
 Purpose: lightweight photo/general upscaling
 
 Why test it: promising quality/speed tradeoff for CPU-class hardware.
 
-Risk: source, filename, and Spandrel compatibility must be confirmed before exposing.
+Risk: source, filename, and Spandrel compatibility must be confirmed before replacing
+the current accepted `RealPLKSR_4x.pth` file.
 
 ### Research-Quality Heavy Models
 
@@ -387,29 +389,29 @@ Purpose: quality ceiling tests, difficult blur/detail reconstruction
 Why test them: they represent stronger academic or Transformer-style reconstruction
 families.
 
-Risk: pure CPU processing may be too slow for NAS operator use. HAT is now exposed as
-an explicit slow option because the user asked for it, but it still should not become
-the default without stronger real-image timing evidence. DAT and Omni-SR remain in the
-evaluation bucket.
+Risk: pure CPU processing may be too slow for NAS operator use. HAT, DRCT, and DRCT-L
+are now exposed as explicit slow options. DAT remains evaluation-only, and Omni-SR is
+not currently installed or registered.
 
 ### Face Restoration
 
 **CodeFormer**
-Status: `downloadable`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Purpose: face restoration with adjustable fidelity
 
 Why test it: useful when a photo has small or degraded faces that normal upscalers distort.
 
-Risk: this is face restoration, not normal super-resolution. It should be a separate
-post-process mode, not another item in the core upscale dropdown.
+Risk: this is face restoration, not normal super-resolution. The UI exposes it in the
+separate `人脸修复` group and warns operators not to use it for images without faces.
 
 **GFPGAN v1.4**
-Status: `downloadable`, `needs-backend`
+Status: `installed`, backend integrated, operator-visible
 Purpose: faster face restoration baseline
 
 Why test it: mature face restoration baseline with broad community usage.
 
-Risk: same product-boundary issue as CodeFormer; it changes what the app promises.
+Risk: same product-boundary issue as CodeFormer; keep it grouped as face restoration,
+not as a general upscale model.
 
 ## Timing Matrix Template
 

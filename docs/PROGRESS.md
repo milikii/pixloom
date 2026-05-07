@@ -1,6 +1,6 @@
 # Pixloom Progress
 
-Last updated: 2026-05-04
+Last updated: 2026-05-08
 
 ## Current Phase
 
@@ -35,6 +35,10 @@ inference, SQLite tasks, history cleanup, and request logging.
   instead of leaving them stuck as running.
 - APISR, CodeFormer, and GFPGAN now have ONNX/custom backend paths and are part of
   the operator-visible installed model set when their files are present.
+- Batch pre-queue validation failures now return structured 4xx errors, write
+  `ui_rejected` audit rows, and surface Chinese request-id messages in the SPA.
+- The task panel is split into `结果` / `任务` / `日志` tabs and highlights partial
+  batch completion when a batch has both successful and failed/interrupted rows.
 - Trellis frontend/backend specs updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice
@@ -50,22 +54,31 @@ inference, SQLite tasks, history cleanup, and request logging.
 
 ## Current Operator Model Policy
 
-The API reports installed model files, operator-visible Spandrel models, and hidden
-evaluation-only unsupported-backend models separately. The exposure contract is
-enforced at two layers:
+The API reports installed model files, the current operator-visible set, and hidden
+evaluation-only files separately. The exposure contract is enforced at two layers:
 
 - `list_available_models()` at the API/UI boundary
 - `resolve_model()` at the worker boundary
 
-The conservative daily-use subset remains:
+The current operator-visible set intentionally keeps all usable local models exposed:
 
-1. `照片自然 - 4x Remacri`
-2. `照片通用 - Real-ESRGAN 4x`
-3. `锐化插画 - 4x UltraSharp`
-4. `动漫插画 - Real-ESRGAN Anime 6B`
-5. `快速试跑 - Real-ESRGAN General v3`
+1. `SPAN 4x`
+2. `RealPLKSR 4x`
+3. `照片修复 - 4x NMKD-Siax`
+4. `锐化插画 - 4x UltraSharp`
+5. `DRCT 4x`
 6. `质量上限 - HAT-L 4x`
-7. `动漫修复 - Real-CUGAN 3x 去噪`
+7. `DRCT-L 4x`
+8. `APISR 4x`
+9. `动漫修复 - Real-CUGAN 3x 去噪`
+10. `动漫精修 - Real-CUGAN 2x 去噪`
+11. `动漫插画 - Real-ESRGAN Anime 6B`
+12. `CodeFormer`
+13. `GFPGAN v1.4`
+14. `快速试跑 - Real-ESRGAN General v3`
+15. `照片自然 - 4x Remacri`
+16. `照片通用 - Real-ESRGAN 4x`
 
-Additional promoted models include NMKD-Siax, SPAN, RealPLKSR, DAT, OmniSR,
-APISR (`onnxruntime`), CodeFormer (`custom`), and GFPGAN (`custom`).
+The current hidden evaluation-only tracked model is `DAT2 4x 预训练版`. It remains
+installed for comparison but outside the main submission flow because it is a pretrain
+research artifact.
