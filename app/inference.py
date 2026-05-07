@@ -17,6 +17,7 @@ from app.output_size import (
     OutputSizePlan,
     build_output_size_plan,
 )
+from app.output_quality import normalize_output_quality
 from app.request_logging import build_request_id, log_event
 
 
@@ -256,7 +257,7 @@ def _save_image(image: Image.Image, output_path: Path, output_format: str, quali
     save_format = normalize_output_format(output_format)
     save_kwargs: dict[str, int] = {}
     if save_format in {"JPEG", "WEBP"}:
-        save_kwargs["quality"] = max(1, min(100, int(quality)))
+        save_kwargs["quality"] = normalize_output_quality(quality)
     if save_format == "JPEG" and image.mode not in {"RGB", "L"}:
         image = image.convert("RGB")
     image.save(output_path, format=save_format, **save_kwargs)

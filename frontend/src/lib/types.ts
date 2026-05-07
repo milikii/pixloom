@@ -86,7 +86,6 @@ export interface BatchCreateRequest {
   stored_paths: string[];
   model_id: string;
   output_format: string;
-  quality: number;
   output_size_preset: OutputSizePreset;
 }
 

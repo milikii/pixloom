@@ -9,10 +9,8 @@ import type { OutputSizePreset } from "@/lib/types";
 
 interface OutputParamsProps {
   format: string;
-  quality: number;
   outputSizePreset: OutputSizePreset;
   onFormatChange: (f: string) => void;
-  onQualityChange: (q: number) => void;
   onOutputSizePresetChange: (preset: OutputSizePreset) => void;
 }
 
@@ -30,10 +28,8 @@ const OUTPUT_SIZE_OPTIONS: Array<{
 
 export function OutputParams({
   format,
-  quality,
   outputSizePreset,
   onFormatChange,
-  onQualityChange,
   onOutputSizePresetChange,
 }: OutputParamsProps) {
   const [open, setOpen] = useState(false);
@@ -96,20 +92,9 @@ export function OutputParams({
               ))}
             </div>
           </div>
-          <div>
-            <label className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
-              <span>JPG / WEBP 质量</span>
-              <span className="tabular-nums text-accent">{quality}</span>
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={100}
-              value={quality}
-              onChange={(e) => onQualityChange(Number(e.target.value))}
-              className="w-full accent-accent"
-            />
-          </div>
+          <p className="text-xs text-muted-foreground">
+            JPG / WEBP 质量固定为 100，不再单独调节。
+          </p>
         </div>
       )}
     </div>

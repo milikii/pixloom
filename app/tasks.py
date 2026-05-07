@@ -11,6 +11,7 @@ from app.output_size import (
     NATIVE_OUTPUT_SIZE_PRESET,
     normalize_output_size_preset,
 )
+from app.output_quality import normalize_output_quality
 from app.request_logging import log_event
 
 
@@ -178,7 +179,7 @@ def create_batch(
                 created_at,
                 model_id,
                 output_format,
-                int(quality),
+                normalize_output_quality(quality),
                 preset,
                 total_count,
             ),
@@ -188,7 +189,7 @@ def create_batch(
         created_at=_parse_timestamp(created_at),
         model_id=model_id,
         output_format=output_format,
-        quality=int(quality),
+        quality=normalize_output_quality(quality),
         output_size_preset=preset,
         total_count=total_count,
     )
@@ -226,7 +227,7 @@ def enqueue_task(
                 str(input_path),
                 model_id,
                 output_format,
-                int(quality),
+                normalize_output_quality(quality),
                 preset,
                 created_at,
                 retry_of_request_id,
@@ -279,7 +280,7 @@ def create_batch_with_tasks(
                     batch_created_at,
                     model_id,
                     output_format,
-                    int(quality),
+                    normalize_output_quality(quality),
                     preset,
                     len(tasks),
                 ),
@@ -301,7 +302,7 @@ def create_batch_with_tasks(
                         str(task.input_path),
                         task.model_id,
                         task.output_format,
-                        int(task.quality),
+                        normalize_output_quality(task.quality),
                         task_preset,
                         task_created_at,
                         task.retry_of_request_id,

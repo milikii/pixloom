@@ -79,6 +79,27 @@ def test_enqueue_and_claim_task_transitions_to_running(tmp_path):
     assert claim_queued_task(config, "req-1") is None
 
 
+def test_tasks_persist_quality_as_100(tmp_path):
+    config = _config(tmp_path)
+    input_path = config.input_dir / "source.png"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    input_path.write_bytes(b"fake")
+    _create_batch(config)
+
+    queued = enqueue_task(
+        config,
+        request_id="req-1",
+        batch_id="batch-1",
+        input_filename="source.png",
+        input_path=input_path,
+        model_id="fake-4x",
+        output_format="JPG",
+        quality=90,
+    )
+
+    assert queued.quality == 100
+
+
 def test_claim_next_queued_task_is_transactional_by_status(tmp_path):
     config = _config(tmp_path)
     input_path = config.input_dir / "source.png"

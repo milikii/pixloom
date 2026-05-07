@@ -85,6 +85,28 @@ def test_batch_endpoint_defaults_output_size_preset_to_native(tmp_path):
     assert create_body["tasks"][0]["output_size_preset"] == "native"
 
 
+def test_batch_endpoint_forces_quality_to_100(tmp_path):
+    config = _config(tmp_path)
+    config.ensure_directories()
+    (config.models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
+    input_path = config.input_dir / "source.png"
+    input_path.write_bytes(b"fake")
+
+    create_body = batches.create_batch(
+        batches.BatchCreateRequest(
+            stored_paths=[str(input_path)],
+            model_id="realesrgan-x4plus",
+            output_format="JPG",
+            quality=90,
+            output_size_preset="native",
+        ),
+        config,
+    )
+
+    assert create_body["queued_count"] == 1
+    assert create_body["tasks"][0]["quality"] == 100
+
+
 def test_batch_endpoint_rejects_invalid_output_size_preset(tmp_path):
     config = _config(tmp_path)
     config.ensure_directories()

@@ -20,7 +20,6 @@ export default function HomePage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [modelId, setModelId] = useState<string | null>(null);
   const [outputFormat, setOutputFormat] = useState("PNG");
-  const [quality, setQuality] = useState(90);
   const [outputSizePreset, setOutputSizePreset] =
     useState<OutputSizePreset>("native");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -53,7 +52,6 @@ export default function HomePage() {
         stored_paths: storedPaths,
         model_id: modelId,
         output_format: outputFormat,
-        quality,
         output_size_preset: outputSizePreset,
       });
       setSelectedTaskId(batchResult.first_request_id);
@@ -67,7 +65,6 @@ export default function HomePage() {
     selectedFiles,
     modelId,
     outputFormat,
-    quality,
     outputSizePreset,
     fileUpload,
     submitBatch,
@@ -132,10 +129,8 @@ export default function HomePage() {
           />
           <OutputParams
             format={outputFormat}
-            quality={quality}
             outputSizePreset={outputSizePreset}
             onFormatChange={setOutputFormat}
-            onQualityChange={setQuality}
             onOutputSizePresetChange={setOutputSizePreset}
           />
 
