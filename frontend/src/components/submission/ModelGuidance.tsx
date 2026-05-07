@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Info,
 } from "lucide-react";
 import { useState } from "react";
 import type { ResolvedModel } from "@/lib/types";
@@ -14,15 +13,11 @@ import { zh } from "@/i18n/zh";
 
 interface ModelGuidanceProps {
   model: ResolvedModel | null;
-  hiddenCount: number;
-  hasLocalModels: boolean;
   hasSelectedModel: boolean;
 }
 
 export function ModelGuidance({
   model,
-  hiddenCount,
-  hasLocalModels,
   hasSelectedModel,
 }: ModelGuidanceProps) {
   const [open, setOpen] = useState(true);
@@ -33,28 +28,8 @@ export function ModelGuidance({
   }
 
   function renderContent() {
-    if (!model && hasLocalModels) {
-      return (
-        <div className="flex items-start gap-3">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-          <div>
-            <p className="text-sm text-foreground">{zh.model.noOperatorReady}</p>
-            {hiddenCount > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                {zh.model.hiddenNote.replace("{count}", String(hiddenCount))}
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
     if (!model) {
-      return (
-        <div className="flex items-start gap-3">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{zh.model.noModels}</p>
-        </div>
-      );
+      return <p className="text-sm text-muted-foreground">{zh.model.noModels}</p>;
     }
     if (!hasSelectedModel) {
       return (
@@ -124,11 +99,6 @@ export function ModelGuidance({
             </li>
           )}
         </ul>
-        {hiddenCount > 0 && (
-          <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-            {zh.model.hiddenNote.replace("{count}", String(hiddenCount))}
-          </p>
-        )}
       </div>
     );
   }
@@ -139,7 +109,7 @@ export function ModelGuidance({
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
       >
-        模型与策略
+        当前模型
         {open ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
