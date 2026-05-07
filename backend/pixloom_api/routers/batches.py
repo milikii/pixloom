@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.config import AppConfig
@@ -12,10 +12,11 @@ from app.output_size import (
     OUTPUT_SIZE_TARGETS,
     NATIVE_OUTPUT_SIZE_PRESET,
     normalize_output_size_preset,
+    output_size_label_zh,
 )
 from app.output_quality import FIXED_OUTPUT_QUALITY, normalize_output_quality
 from app.tasks import QueuedTaskInput, create_batch_with_tasks, build_batch_id
-from app.request_logging import build_request_id, read_request_log_excerpt
+from app.request_logging import build_request_id, read_request_log_excerpt, log_event
 from app.model_registry import list_available_models
 from backend.pixloom_api.deps import get_config
 
@@ -33,13 +34,14 @@ class BatchCreateRequest(BaseModel):
 @router.post("")
 def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_config)):
     if not body.stored_paths:
-        return _batch_error("NO_IMAGE_SELECTED", "请先上传图片再开始放大。", "")
+        _batch_error(config, "NO_IMAGE_SELECTED", "请先上传图片再开始放大。", "")
 
     try:
         output_size_preset = normalize_output_size_preset(body.output_size_preset)
     except ValueError:
         allowed = ", ".join(OUTPUT_SIZE_TARGETS)
-        return _batch_error(
+        _batch_error(
+            config,
             "OUTPUT_SIZE_PRESET_INVALID",
             f"输出尺寸无效。可选值：{allowed}。",
             body.model_id,
@@ -48,11 +50,13 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
     models = list_available_models(config.models_dir)
     selected = next((m for m in models if m.id == body.model_id), None)
     if selected is None:
-        return _batch_error(
+        _batch_error(
+            config,
             "MODEL_NOT_AVAILABLE", "当前选择的模型不可用。", body.model_id
         )
     if not selected.absolute_path.is_file():
-        return _batch_error(
+        _batch_error(
+            config,
             "MODEL_FILE_MISSING", "当前模型文件不存在。", body.model_id
         )
 
@@ -82,7 +86,8 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
             tasks=task_inputs,
         )
     except Exception as exc:
-        return _batch_error(
+        _batch_error(
+            config,
             "BATCH_QUEUE_SETUP_FAILED", f"批量任务创建失败：{exc}", body.model_id
         )
 
@@ -114,6 +119,7 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
                 "output_format": r.output_format,
                 "quality": FIXED_OUTPUT_QUALITY,
                 "output_size_preset": r.output_size_preset,
+                "output_size_label": output_size_label_zh(r.output_size_preset),
                 "created_at": r.created_at.isoformat(),
                 "started_at": r.started_at.isoformat() if r.started_at else None,
                 "completed_at": r.completed_at.isoformat() if r.completed_at else None,
@@ -134,12 +140,24 @@ def create_batch(body: BatchCreateRequest, config: AppConfig = Depends(get_confi
     }
 
 
-def _batch_error(code: str, msg: str, model_id: str):
-    return {
-        "batch_id": "",
-        "tasks": [],
-        "queued_count": 0,
-        "first_request_id": "",
-        "status_message": f"错误 [{code}]：{msg}",
-        "log_excerpt": f"[failure] batch_error | error_code={code} | model_id={model_id}",
-    }
+def _batch_error(config: AppConfig, code: str, msg: str, model_id: str) -> None:
+    request_id = build_request_id()
+    log_event(
+        config,
+        request_id=request_id,
+        event="ui_rejected",
+        status="failure",
+        model_id=model_id,
+        error_code=code,
+        error_detail=msg,
+    )
+    raise HTTPException(
+        status_code=400,
+        detail={
+            "request_id": request_id,
+            "code": code,
+            "user_message_zh": f"{msg} 请求编号：{request_id}",
+            "likely_cause_zh": "请求在进入后台队列前被 API 边界拒绝。",
+            "suggested_action_zh": "请按提示调整图片、模型或输出参数后重新提交。",
+        },
+    )

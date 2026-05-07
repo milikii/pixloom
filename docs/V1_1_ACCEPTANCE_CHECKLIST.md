@@ -1,6 +1,6 @@
 # Pixloom V1.1 Acceptance Checklist
 
-Last updated: 2026-05-03
+Last updated: 2026-05-08
 
 ## Goal
 
@@ -13,15 +13,24 @@ Run one focused manual acceptance pass for the current V1.1 launch-set contract:
 
 ## Current Expected Operator-Visible Models
 
-At the time this checklist was written, the default runtime-visible set is:
+The current runtime-visible set intentionally keeps all usable local models exposed:
 
+- `SPAN 4x`
+- `RealPLKSR 4x`
+- `照片修复 - 4x NMKD-Siax`
+- `锐化插画 - 4x UltraSharp`
+- `DRCT 4x`
+- `质量上限 - HAT-L 4x`
+- `DRCT-L 4x`
+- `APISR 4x`
+- `动漫修复 - Real-CUGAN 3x 去噪`
+- `动漫精修 - Real-CUGAN 2x 去噪`
+- `动漫插画 - Real-ESRGAN Anime 6B`
+- `CodeFormer`
+- `GFPGAN v1.4`
+- `快速试跑 - Real-ESRGAN General v3`
 - `照片自然 - 4x Remacri`
 - `照片通用 - Real-ESRGAN 4x`
-- `锐化插画 - 4x UltraSharp`
-- `动漫插画 - Real-ESRGAN Anime 6B`
-- `快速试跑 - Real-ESRGAN General v3`
-- `质量上限 - HAT-L 4x`
-- `动漫修复 - Real-CUGAN 3x 去噪`
 
 Other local model files may exist in `models/`, but they should not appear in the
 primary submission dropdown unless they are explicitly promoted into the operator set.
@@ -84,25 +93,14 @@ Use one controlled failure path and capture the request id shown in the UI.
 Recommended low-risk method:
 
 1. Open the app and select an accepted model in the dropdown.
-2. On the NAS, temporarily rename that selected model file:
+2. Select `CodeFormer` or `GFPGAN v1.4`.
+3. Submit a normal non-face image.
+4. Confirm the task fails with a Chinese `NO_FACE_DETECTED` style error and a
+   request id.
 
-```bash
-mv models/RealESRGAN_x4plus_anime_6B.pth models/RealESRGAN_x4plus_anime_6B.pth.off
-```
-
-3. Submit a normal image from the already-open page.
-4. Confirm the UI shows a Chinese error and a request id.
-5. Restore the file immediately:
-
-```bash
-mv models/RealESRGAN_x4plus_anime_6B.pth.off models/RealESRGAN_x4plus_anime_6B.pth
-```
-
-6. Rebuild or restart only if needed:
-
-```bash
-docker compose up -d --force-recreate
-```
+Pre-queue validation failures, such as selecting a model whose file is missing, now
+return a structured 4xx API error and log `ui_rejected`; they are useful API-boundary
+checks, but they are not task lifecycle checks because no task row is created.
 
 Evidence to collect:
 
