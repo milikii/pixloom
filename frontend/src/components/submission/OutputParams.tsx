@@ -48,7 +48,7 @@ export function OutputParams({
               className={`min-h-14 rounded-lg border px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-accent/20 ${
                 outputSizePreset === option.value
                   ? "border-accent bg-accent-subtle text-accent"
-                  : "border-border bg-muted text-foreground hover:border-accent/50"
+                  : "border-border bg-muted/60 text-foreground hover:border-accent/50"
               }`}
             >
               <span className="block text-sm font-semibold">{option.label}</span>
@@ -61,7 +61,7 @@ export function OutputParams({
       </div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
       >
         保存参数
         {open ? (
@@ -71,7 +71,7 @@ export function OutputParams({
         )}
       </button>
       {open && (
-        <div className="border-t border-border px-4 pb-4 pt-3 space-y-4">
+        <div className="space-y-4 border-t border-border px-4 pb-4 pt-3">
           <div>
             <label className="mb-2 block text-xs font-medium text-muted-foreground">
               输出格式
@@ -84,7 +84,7 @@ export function OutputParams({
                   className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     format === f
                       ? "bg-accent text-white shadow-sm"
-                      : "bg-muted text-muted-foreground hover:bg-accent-subtle hover:text-accent"
+                      : "bg-muted/60 text-muted-foreground hover:bg-accent-subtle hover:text-accent"
                   }`}
                 >
                   {f}

@@ -86,7 +86,6 @@ export default function HomePage() {
       <ShellHeader
         operatorCount={models.length}
         installedCount={installedCount}
-        hiddenCount={hiddenCount}
         rightSlot={<ThemeToggle variant="header" />}
       />
 
@@ -103,36 +102,40 @@ export default function HomePage() {
             disabled={isSubmitting}
           />
 
-          <PanelHead
-            eyebrow={zh.panels.model.eyebrow}
-            title={zh.panels.model.title}
-            copy={zh.panels.model.copy}
-          />
-          <ModelPicker
-            models={models}
-            selectedId={modelId}
-            onSelect={setModelId}
-            disabled={isSubmitting}
-          />
+          <div className="rounded-xl border border-border/80 bg-muted/20 px-4 py-4">
+            <PanelHead
+              eyebrow={zh.panels.model.eyebrow}
+              title={zh.panels.model.title}
+              copy={zh.panels.model.copy}
+            />
+            <ModelPicker
+              models={models}
+              selectedId={modelId}
+              onSelect={setModelId}
+              disabled={isSubmitting}
+            />
 
-          <ModelGuidance
-            model={guidanceModel}
-            hiddenCount={hiddenCount}
-            hasLocalModels={installedCount > 0}
-            hasSelectedModel={!!modelId}
-          />
+            <ModelGuidance
+              model={guidanceModel}
+              hiddenCount={hiddenCount}
+              hasLocalModels={installedCount > 0}
+              hasSelectedModel={!!modelId}
+            />
+          </div>
 
-          <PanelHead
-            eyebrow={zh.panels.output.eyebrow}
-            title={zh.panels.output.title}
-            copy={zh.panels.output.copy}
-          />
-          <OutputParams
-            format={outputFormat}
-            outputSizePreset={outputSizePreset}
-            onFormatChange={setOutputFormat}
-            onOutputSizePresetChange={setOutputSizePreset}
-          />
+          <div className="rounded-xl border border-border/80 bg-muted/20 px-4 py-4">
+            <PanelHead
+              eyebrow={zh.panels.output.eyebrow}
+              title={zh.panels.output.title}
+              copy={zh.panels.output.copy}
+            />
+            <OutputParams
+              format={outputFormat}
+              outputSizePreset={outputSizePreset}
+              onFormatChange={setOutputFormat}
+              onOutputSizePresetChange={setOutputSizePreset}
+            />
+          </div>
 
           {submitError && (
             <div className="mb-4 rounded-lg border border-destructive-subtle bg-destructive-subtle px-4 py-3 text-sm text-destructive">

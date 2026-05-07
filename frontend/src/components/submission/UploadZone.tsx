@@ -66,20 +66,20 @@ export function UploadZone({ onFilesChange, disabled }: UploadZoneProps) {
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors duration-150 ${
+        className={`cursor-pointer rounded-xl border-2 border-dashed px-5 py-7 text-center transition-colors duration-150 sm:px-8 sm:py-8 ${
           isDragOver
             ? "border-accent bg-accent-subtle"
             : "border-border bg-muted/30 hover:border-accent hover:bg-accent-subtle"
         } ${disabled ? "pointer-events-none opacity-50" : ""}`}
       >
-        <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-3 text-sm text-muted-foreground">
+        <Upload className="mx-auto h-7 w-7 text-muted-foreground" />
+        <p className="mt-2.5 text-sm text-foreground">
           {zh.upload.placeholder}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground/70">
+        <p className="mt-1 text-[11px] text-muted-foreground/80 sm:text-xs">
           {zh.upload.formats}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground/60">
+        <p className="mt-0.5 text-[11px] text-muted-foreground/60 sm:text-xs">
           {zh.upload.maxSize}
         </p>
         <input
@@ -94,13 +94,13 @@ export function UploadZone({ onFilesChange, disabled }: UploadZoneProps) {
 
       {selectedFiles.length > 0 && (
         <div className="mt-3 space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-[11px] font-medium text-muted-foreground">
             {zh.upload.selected.replace("{count}", String(selectedFiles.length))}
           </p>
           {selectedFiles.map(({ file, id }) => (
             <div
               key={id}
-              className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm"
             >
               <span className="truncate text-foreground">{file.name}</span>
               <span className="mx-2 shrink-0 text-xs text-muted-foreground">

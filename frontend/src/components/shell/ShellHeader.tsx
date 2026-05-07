@@ -23,12 +23,10 @@ export function ShellMetric({
 export function ShellHeader({
   operatorCount,
   installedCount,
-  hiddenCount,
   rightSlot,
 }: {
   operatorCount: number;
   installedCount: number;
-  hiddenCount: number;
   rightSlot?: ReactNode;
 }) {
   const { shell } = zh;
@@ -50,10 +48,9 @@ export function ShellHeader({
           </div>
           {rightSlot && <div className="shrink-0">{rightSlot}</div>}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
           <ShellMetric value={operatorCount} label={shell.metrics.operator} />
           <ShellMetric value={installedCount} label={shell.metrics.installed} />
-          <ShellMetric value={hiddenCount} label={shell.metrics.hidden} />
         </div>
       </div>
     </header>
