@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShellHeader } from "@/components/shell/ShellHeader";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { PanelHead } from "@/components/shell/PanelHead";
@@ -81,6 +81,16 @@ export default function HomePage() {
   const guidanceModel: ResolvedModel | null =
     models.find((m) => m.id === modelId) ?? null;
 
+  useEffect(() => {
+    if (models.length === 0) {
+      if (modelId !== null) setModelId(null);
+      return;
+    }
+    if (!modelId || !models.some((m) => m.id === modelId)) {
+      setModelId(models[0].id);
+    }
+  }, [models, modelId]);
+
   return (
     <div className="mx-auto max-w-[1380px] px-3 pb-8 pt-4 sm:px-4 sm:pb-10 sm:pt-5">
       <ShellHeader
@@ -117,8 +127,6 @@ export default function HomePage() {
 
             <ModelGuidance
               model={guidanceModel}
-              hiddenCount={hiddenCount}
-              hasLocalModels={installedCount > 0}
               hasSelectedModel={!!modelId}
             />
           </div>
