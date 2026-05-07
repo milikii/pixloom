@@ -2,11 +2,10 @@ export const zh = {
   shell: {
     label: "NAS CPU Console",
     title: "Pixloom",
-    copy: "图片先落盘，再进入后台串行队列。手机端只保留最短提交路径，结果、任务和日志各自收口，避免一整列长面板把状态冲散。",
+    copy: "本地模型、本地队列、本地结果。提交后后台串行处理，手机端只保留最短操作路径。",
     metrics: {
       operator: "当前开放",
       installed: "本地文件",
-      hidden: "评估池",
     },
   },
   panels: {
