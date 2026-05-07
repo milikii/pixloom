@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ShellHeader } from "@/components/shell/ShellHeader";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { PanelHead } from "@/components/shell/PanelHead";
@@ -37,12 +37,15 @@ export default function HomePage() {
   const tasks = taskData?.tasks ?? [];
   const hiddenCount = modelData?.hidden_count ?? 0;
   const installedCount = models.length + hiddenCount;
+  const effectiveModelId = modelId && models.some((m) => m.id === modelId)
+    ? modelId
+    : models[0]?.id ?? null;
 
   const selectedTask: TaskRecord | null =
     tasks.find((t) => t.request_id === selectedTaskId) ?? null;
 
   const handleSubmit = useCallback(async () => {
-    if (selectedFiles.length === 0 || !modelId) return;
+    if (selectedFiles.length === 0 || !effectiveModelId) return;
     setSubmitError("");
 
     try {
@@ -50,7 +53,7 @@ export default function HomePage() {
       const storedPaths = uploadResult.uploaded.map((u) => u.stored_path);
       const batchResult = await submitBatch.mutateAsync({
         stored_paths: storedPaths,
-        model_id: modelId,
+        model_id: effectiveModelId,
         output_format: outputFormat,
         output_size_preset: outputSizePreset,
       });
@@ -63,7 +66,7 @@ export default function HomePage() {
     }
   }, [
     selectedFiles,
-    modelId,
+    effectiveModelId,
     outputFormat,
     outputSizePreset,
     fileUpload,
@@ -79,17 +82,7 @@ export default function HomePage() {
 
   const isSubmitting = fileUpload.isPending || submitBatch.isPending;
   const guidanceModel: ResolvedModel | null =
-    models.find((m) => m.id === modelId) ?? null;
-
-  useEffect(() => {
-    if (models.length === 0) {
-      if (modelId !== null) setModelId(null);
-      return;
-    }
-    if (!modelId || !models.some((m) => m.id === modelId)) {
-      setModelId(models[0].id);
-    }
-  }, [models, modelId]);
+    models.find((m) => m.id === effectiveModelId) ?? null;
 
   return (
     <div className="mx-auto max-w-[1380px] px-3 pb-8 pt-4 sm:px-4 sm:pb-10 sm:pt-5">
@@ -120,14 +113,14 @@ export default function HomePage() {
             />
             <ModelPicker
               models={models}
-              selectedId={modelId}
+              selectedId={effectiveModelId}
               onSelect={setModelId}
               disabled={isSubmitting}
             />
 
             <ModelGuidance
               model={guidanceModel}
-              hasSelectedModel={!!modelId}
+              hasSelectedModel={!!effectiveModelId}
             />
           </div>
 
@@ -154,7 +147,7 @@ export default function HomePage() {
           <SubmitButton
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={selectedFiles.length === 0 || !modelId}
+            disabled={selectedFiles.length === 0 || !effectiveModelId}
           />
         </div>
 
