@@ -56,7 +56,7 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
 
 7. Documentation.
    - README and architecture document describe the one-container deployment.
-   - Trellis specs now point future agents at React/FastAPI rather than the removed
+   - Project execution guidance now points future agents at React/FastAPI rather than the removed
      Gradio entrypoint.
 
 ## Current Verification Targets

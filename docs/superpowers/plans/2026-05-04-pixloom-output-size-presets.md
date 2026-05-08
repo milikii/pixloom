@@ -1,4 +1,3 @@
-<!-- /autoplan restore point: .trellis/workspace/root/output-size-presets-autoplan-restore.md -->
 
 # Pixloom Output Size Presets Plan
 

@@ -13,10 +13,12 @@ models/_incoming
 frontend/node_modules
 frontend/.next
 frontend/out
+frontend-out
 frontend/logs
 frontend/state
 frontend/tsconfig.tsbuildinfo
 
+.agents
 .claude
 .codex
 .gstack

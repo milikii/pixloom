@@ -35,6 +35,7 @@ node_modules/
 package-lock.json
 
 # Frontend runtime data
+frontend-out/
 frontend/backend/
 frontend/input/
 frontend/models/
@@ -44,5 +45,10 @@ frontend/state/
 
 # Dev tooling
 compose.override.yml
+.agents/skills/
+.claude/
+.claude.codex/
+.codex/
 .gstack/
+.trellis/
 *.codex.*
