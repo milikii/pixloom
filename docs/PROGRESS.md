@@ -39,7 +39,7 @@ inference, SQLite tasks, history cleanup, and request logging.
   `ui_rejected` audit rows, and surface Chinese request-id messages in the SPA.
 - The task panel is split into `结果` / `任务` / `日志` tabs and highlights partial
   batch completion when a batch has both successful and failed/interrupted rows.
-- Trellis frontend/backend specs updated so future agents target React/FastAPI.
+- Frontend/backend execution guidance updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice
 

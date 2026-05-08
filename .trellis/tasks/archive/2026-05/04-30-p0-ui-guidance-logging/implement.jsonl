@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Avoid duplicating error mapping and request-id handling across UI and inference layers."}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "This change crosses UI, model metadata, inference, and logs; keep contracts explicit at each boundary."}
-{"file": "app/app.py", "reason": "Existing Gradio UI copy, status formatting, and error mapping entry point."}
-{"file": "app/inference.py", "reason": "Current validation, persistence, and backend orchestration path where request logging must live."}
-{"file": "app/model_registry.py", "reason": "Existing model metadata shape and available-model filtering behavior."}

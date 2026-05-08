@@ -1,28 +1,6 @@
-<!-- TRELLIS:START -->
-# Trellis Instructions
+# Project Agent Notes
 
-These instructions are for AI assistants working in this project.
+This project uses the repository docs and local commands as the only workflow source.
 
-Use the `/trellis:start` command when starting a new session to:
-- Initialize your developer identity
-- Understand current project context
-- Read relevant guidelines
-
-Use `@/.trellis/` to learn:
-- Development workflow (`workflow.md`)
-- Project structure guidelines (`spec/`)
-- Developer workspace (`workspace/`)
-
-If you're using Codex, project-scoped helpers may also live in:
-- `.agents/skills/` for reusable Trellis skills
-- `.codex/agents/` for optional custom subagents
-
-Keep this managed block so 'trellis update' can refresh the instructions.
-
-<!-- TRELLIS:END -->
-
-## Local Note
-
-- In `Claude Code`, start Trellis with `/trellis:start`.
-- In `Codex`, Trellis appears as project skills rather than a single `trellis` menu entry.
+Before making changes, read the repository README, current progress docs, and local test/build commands.
 - Use `$start`, `$brainstorm`, `$check`, `$check-cross-layer`, `$finish-work`, `$record-session`, and `$parallel` in `Codex`.
