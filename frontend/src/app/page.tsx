@@ -89,6 +89,7 @@ export default function HomePage() {
       <ShellHeader
         operatorCount={models.length}
         installedCount={installedCount}
+        hiddenCount={hiddenCount}
         rightSlot={<ThemeToggle variant="header" />}
       />
 

@@ -23,10 +23,12 @@ export function ShellMetric({
 export function ShellHeader({
   operatorCount,
   installedCount,
+  hiddenCount,
   rightSlot,
 }: {
   operatorCount: number;
   installedCount: number;
+  hiddenCount: number;
   rightSlot?: ReactNode;
 }) {
   const { shell } = zh;
@@ -52,6 +54,11 @@ export function ShellHeader({
           <ShellMetric value={operatorCount} label={shell.metrics.operator} />
           <ShellMetric value={installedCount} label={shell.metrics.installed} />
         </div>
+        {hiddenCount > 0 && (
+          <p className="mt-3 text-[12px] leading-relaxed text-header-secondary">
+            {zh.model.hiddenNote.replace("{count}", String(hiddenCount))}
+          </p>
+        )}
       </div>
     </header>
   );

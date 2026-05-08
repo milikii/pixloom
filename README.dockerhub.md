@@ -1,28 +1,12 @@
 # Pixloom
 
-Pixloom 是一个面向 NAS 的单容器、CPU-only 图片放大控制台。
+**NAS 上的 CPU 图片放大工具 — 单容器、浏览器操作、开箱即用。**
 
-它提供：
-- FastAPI 后端
-- 静态导出的前端界面
-- SQLite 任务队列
-- 首次启动自动补齐的内置模型包
-- 中文优先操作流
+[![Docker Pulls](https://img.shields.io/docker/pulls/alexisks/pixloom)](https://hub.docker.com/r/alexisks/pixloom)
 
-它不提供：
-- GPU 支持
-- ComfyUI 式工作流
-- 自动下载外部模型
+---
 
-## 最快启动
-
-宿主机准备一个目录：
-
-```text
-/srv/pixloom
-```
-
-启动：
+## 运行
 
 ```bash
 docker run -d \
@@ -33,13 +17,9 @@ docker run -d \
   alexisks/pixloom:latest
 ```
 
-打开：
+打开 `http://<你的NAS_IP>:7860`。
 
-```text
-http://<宿主机IP>:7860
-```
-
-## Docker Compose
+## Compose
 
 ```yaml
 services:
@@ -53,68 +33,60 @@ services:
       - /srv/pixloom:/data
 ```
 
-## 为什么只挂一个目录
+## 镜像说明
 
-容器内部仍然会使用这些路径：
-- `/data/models`
-- `/data/input`
-- `/data/output`
-- `/data/logs`
-- `/data/state/pixloom.sqlite3`
+- **纯 CPU 推理**，不需要 GPU / CUDA
+- 单端口 `7860`，FastAPI 同时提供 API 和前端
+- 内置 16 个预配置超分模型，首次启动自动补齐到 `/data/models`
+- SQLite 任务队列，不依赖外部数据库或 Redis
+- 输出格式：PNG / JPG / WEBP（JPG 和 WEBP 质量固定 100）
 
-但部署层默认只需要挂载一个 `/data` 根目录，不需要写五条卷映射。
+## 数据目录
 
-## 首次启动
+挂载一个 `/data` 目录，其余路径由容器内部分配：
 
-镜像内置模型目录：
-
-```text
-/app/bundled-models
-```
-
-应用启动时会把缺失文件自动补到：
-
-```text
-/data/models
-```
-
-已存在的运行时模型不会被覆盖。
-
-## 当前镜像状态
-
-- `CPU-only`
-- 单端口：`7860`
-- 当前内置模型集：`17`
-- 当前默认可见模型：`16`
-- 隐藏评估模型：`1`（`DAT2 4x 预训练版`）
-- `JPG / WEBP` 输出质量固定为 `100`
+| 路径 | 内容 |
+|------|------|
+| `/data/models` | 模型文件 |
+| `/data/input` | 上传原图 |
+| `/data/output` | 放大结果 |
+| `/data/logs` | 请求日志 |
+| `/data/state/pixloom.sqlite3` | 任务数据库 |
 
 ## 健康检查
 
 ```bash
 curl http://127.0.0.1:7860/api/health
+# → {"status":"ok","runtime":"cpu-only","models_installed":17,"models_operator":16}
 ```
 
-示例：
+## 环境变量
 
-```json
-{
-  "status": "ok",
-  "runtime": "cpu-only",
-  "models_installed": 17,
-  "models_operator": 16
+可选，默认值已适配 NAS 场景：
+
+- `PIXLOOM_MAX_INPUT_SIDE` — 输入图片最大边长
+- `PIXLOOM_MAX_OUTPUT_SIDE` — 输出图片最大边长
+- `PIXLOOM_MAX_UPLOAD_BYTES` — 上传大小上限
+- `PIXLOOM_TILE_SIZE` — 推理分块大小
+- `PIXLOOM_TILE_OVERLAP` — 分块重叠量
+- `PIXLOOM_HISTORY_LIMIT` — 任务历史条数
+- `PIXLOOM_HISTORY_RETENTION_DAYS` — 历史保留天数
+
+## HTTPS / 认证
+
+镜像本身不处理 HTTPS 和登录。在 NAS 的 nginx / Caddy 前面套一层反代即可：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:7860;
+    proxy_read_timeout 600s;
+    auth_basic "Pixloom";
+    auth_basic_user_file /etc/nginx/.htpasswd;
 }
 ```
 
-## 可选环境变量
+## 更多信息
 
-默认部署不需要额外环境变量。
-只有在你要调整限制时，才需要覆盖这些值：
-
-- `PIXLOOM_MAX_INPUT_SIDE`
-- `PIXLOOM_MAX_OUTPUT_SIDE`
-- `PIXLOOM_MAX_UPLOAD_BYTES`
-- `PIXLOOM_TILE_SIZE`
-- `PIXLOOM_TILE_OVERLAP`
-- `PIXLOOM_HISTORY_LIMIT`
-- `PIXLOOM_HISTORY_RETENTION_DAYS`
+- 项目主页：[github.com/alexisks/pixloom](https://github.com/alexisks/pixloom)
+- 完整模型说明：[MODEL_CATALOG.md](docs/MODEL_CATALOG.md)
+- 架构文档：[ARCHITECTURE.md](docs/ARCHITECTURE.md)

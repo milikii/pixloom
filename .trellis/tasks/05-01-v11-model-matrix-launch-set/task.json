@@ -60,6 +60,6 @@
     "docs/MODEL_EVALUATION.md",
     "docs/superpowers/plans/2026-05-01-pixloom-model-polish-and-phone-acceptance.md"
   ],
-  "notes": "Completed 2026-05-03. Exposure contract hardened (resolve_model now checks exposure), docs reconciled, batch-safety verified, 78 tests pass, launch set decision: keep 7-model operator set.",
+  "notes": "Completed 2026-05-03. Exposure contract hardened (resolve_model now checks exposure), docs reconciled, batch-safety verified, 78 tests pass. Superseded 2026-05-08 by operator decision to keep all 16 currently usable models visible; DAT2 remains evaluation-only.",
   "meta": {}
 }
