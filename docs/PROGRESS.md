@@ -37,8 +37,9 @@ inference, SQLite tasks, history cleanup, and request logging.
   the operator-visible installed model set when their files are present.
 - Batch pre-queue validation failures now return structured 4xx errors, write
   `ui_rejected` audit rows, and surface Chinese request-id messages in the SPA.
-- The task panel is split into `结果` / `任务` / `日志` tabs and highlights partial
-  batch completion when a batch has both successful and failed/interrupted rows.
+- The task panel keeps the selected result preview visible above the task list so
+  clicking a task immediately updates the visible output; request logs stay in the
+  same panel and partial batch completion remains highlighted.
 - Frontend/backend execution guidance updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice

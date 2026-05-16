@@ -75,7 +75,7 @@ Expected:
 - the main action is visible without hunting
 - the dropdown only shows the current accepted operator models
 - output size choices show `原始`, `2K`, `4K`, and `8K` before hidden save parameters
-- the right side is split into `结果` / `任务` / `日志` tabs instead of one long panel
+- the right side shows the selected result immediately above the task list
 - if more local model files exist than the dropdown shows, the guidance/status copy
   explains that only accepted models are currently exposed
 
@@ -83,7 +83,7 @@ Record:
 
 - phone model / browser
 - whether the model guidance is readable on first viewport
-- whether the task/log tabs feel shorter and easier to scan than the old long sidebar
+- whether tapping a completed task immediately refreshes the visible result preview
 - whether the accepted-only behavior is obvious
 
 ### 2. Controlled Failure With Request ID

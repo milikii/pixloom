@@ -91,11 +91,6 @@ export const zh = {
     taskDetail: "所选任务详情",
     deleteNote: "删除所选任务会同时移除关联的本地输入和输出图片文件。",
   },
-  tabs: {
-    result: "结果",
-    tasks: "任务",
-    logs: "日志",
-  },
   format: {
     png: "PNG",
     jpg: "JPG",

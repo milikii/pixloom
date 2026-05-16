@@ -12,7 +12,6 @@ import {
 import type { TaskRecord, TaskStatus } from "@/lib/types";
 import { zh } from "@/i18n/zh";
 import { RequestLogs } from "@/components/logs/RequestLogs";
-import { ResultsTabs } from "@/components/results/ResultsTabs";
 import { StatusBadge } from "./StatusBadge";
 import { TaskFilterBar, applyFilters } from "./TaskFilterBar";
 import { BatchActionBar, downloadFiles } from "./BatchActionBar";
@@ -393,7 +392,7 @@ export function TaskPanel({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-sm">
-          <span className="font-medium text-foreground">任务列表</span>
+          <span className="font-medium text-foreground">当前结果与任务</span>
           <span className="font-mono text-muted-foreground">
             {filteredTasks.length} 个
             {filteredTasks.length !== tasks.length && (
@@ -418,20 +417,32 @@ export function TaskPanel({
         </div>
       )}
 
-      <ResultsTabs
-        tabs={[
-          { key: "result", label: zh.tabs.result, content: resultContent },
-          { key: "tasks", label: zh.tabs.tasks, content: taskListContent },
-          {
-            key: "logs",
-            label: zh.tabs.logs,
-            content: (
-              <RequestLogs requestId={selectedId} excerpt={logExcerpt} />
-            ),
-          },
-        ]}
-        defaultTab="tasks"
-      />
+      <div className="space-y-4">
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground">
+              {zh.panels.receipt.title}
+            </h2>
+            {selectedTask?.status === "completed" && (
+              <span className="text-xs text-success">已完成</span>
+            )}
+          </div>
+          {resultContent}
+        </section>
+
+        <section className="space-y-2">
+          {taskListContent}
+        </section>
+
+        {selectedId && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-foreground">
+              {zh.panels.log.title}
+            </h2>
+            <RequestLogs requestId={selectedId} excerpt={logExcerpt} />
+          </section>
+        )}
+      </div>
     </div>
   );
 }
