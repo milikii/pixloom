@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import zipfile
 
 import pytest
 from fastapi import HTTPException
@@ -200,6 +201,68 @@ def test_output_thumbnail_endpoint_generates_cached_webp(tmp_path):
 
     cached_again = files.serve_output_thumbnail("large-result.png", request, size=96)
     assert Path(cached_again.path) == cached_path
+
+
+def test_output_archive_endpoint_downloads_selected_completed_tasks(tmp_path):
+    config = _config(tmp_path)
+    config.ensure_directories()
+    (config.models_dir / "RealESRGAN_x4plus.pth").write_bytes(b"fake")
+    request_ids = []
+    for index in range(2):
+        input_path = config.input_dir / f"source-{index}.png"
+        output_path = config.output_dir / f"result-{index}.png"
+        input_path.write_bytes(b"input")
+        output_path.write_bytes(f"output-{index}".encode("utf-8"))
+        create_body = batches.create_batch(
+            batches.BatchCreateRequest(
+                stored_paths=[str(input_path)],
+                model_id="realesrgan-x4plus",
+                output_format="PNG",
+                output_size_preset="native",
+            ),
+            config,
+        )
+        request_id = create_body["first_request_id"]
+        claim_queued_task(config, request_id)
+        mark_task_completed(
+            config,
+            request_id=request_id,
+            output_path=output_path,
+            elapsed_seconds=1.0,
+        )
+        request_ids.append(request_id)
+
+    request = type(
+        "Req",
+        (),
+        {"app": type("App", (), {"state": type("State", (), {"config": config})()})()},
+    )()
+    response = files.serve_output_archive(
+        files.OutputArchiveRequest(request_ids=request_ids),
+        request,
+    )
+    archive_path = Path(response.path)
+
+    try:
+        assert response.media_type == "application/zip"
+        assert archive_path.is_file()
+        with zipfile.ZipFile(archive_path) as archive:
+            assert sorted(archive.namelist()) == ["result-0.png", "result-1.png"]
+            assert archive.read("result-0.png") == b"output-0"
+            assert archive.read("result-1.png") == b"output-1"
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    query_response = files.serve_output_archive_query(
+        request,
+        request_id=request_ids,
+    )
+    query_archive_path = Path(query_response.path)
+    try:
+        with zipfile.ZipFile(query_archive_path) as archive:
+            assert len(archive.namelist()) == 2
+    finally:
+        query_archive_path.unlink(missing_ok=True)
 
 
 def test_create_app_mounts_frontend_static_export(tmp_path, monkeypatch):

@@ -42,7 +42,7 @@ inference, SQLite tasks, history cleanup, and request logging.
   same panel and partial batch completion remains highlighted.
 - Task rows now use cached WebP thumbnails instead of loading original 4K/8K output
   files, and the batch action bar can select every completed task in the current
-  filtered list.
+  filtered list and download them as one zip archive.
 - Frontend/backend execution guidance updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice

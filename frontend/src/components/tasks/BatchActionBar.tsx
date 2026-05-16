@@ -6,6 +6,7 @@ interface BatchActionBarProps {
   selectedIds: Set<string>;
   selectableCount: number;
   allSelected: boolean;
+  downloadPending: boolean;
   onSelectAll: () => void;
   onDownload: () => void;
   onClear: () => void;
@@ -15,6 +16,7 @@ export function BatchActionBar({
   selectedIds,
   selectableCount,
   allSelected,
+  downloadPending,
   onSelectAll,
   onDownload,
   onClear,
@@ -36,11 +38,11 @@ export function BatchActionBar({
       </button>
       <button
         onClick={onDownload}
-        disabled={selectedIds.size === 0}
+        disabled={selectedIds.size === 0 || downloadPending}
         className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-45"
       >
         <Download className="h-3.5 w-3.5" />
-        下载所选
+        {downloadPending ? "正在打包" : "下载所选"}
       </button>
       {selectedIds.size > 0 && (
         <button
@@ -53,15 +55,4 @@ export function BatchActionBar({
       )}
     </div>
   );
-}
-
-/** Trigger browser downloads for a list of output URLs. */
-export function downloadFiles(urls: string[]) {
-  for (const url of urls) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "";
-    a.target = "_blank";
-    a.click();
-  }
 }

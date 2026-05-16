@@ -1,16 +1,27 @@
-"""GET /api/files/output/{path}, GET /api/files/input/{path} — static file serving."""
+"""GET /api/files/* and POST /api/files/output-archive — file serving."""
 
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+import tempfile
+from time import strftime
 import uuid
+import zipfile
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
+from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
+
+from app.tasks import get_task
 
 router = APIRouter(prefix="/files", tags=["files"])
+
+
+class OutputArchiveRequest(BaseModel):
+    request_ids: list[str] = Field(min_length=1, max_length=200)
 
 
 @router.get("/output/{path:path}")
@@ -49,6 +60,59 @@ def serve_output_thumbnail(
     )
 
 
+@router.post("/output-archive")
+def serve_output_archive(body: OutputArchiveRequest, request: Request):
+    return _serve_output_archive(body.request_ids, request)
+
+
+@router.get("/output-archive")
+def serve_output_archive_query(
+    request: Request,
+    request_id: list[str] = Query(default=[]),
+):
+    return _serve_output_archive(request_id, request)
+
+
+def _serve_output_archive(request_ids: list[str], request: Request):
+    if len(request_ids) < 1 or len(request_ids) > 200:
+        raise HTTPException(status_code=400, detail="请选择 1 到 200 个任务。")
+
+    config = request.app.state.config
+    request_ids = list(dict.fromkeys(request_ids))
+    entries: list[tuple[Path, str]] = []
+    invalid_ids: list[str] = []
+    archive_names: set[str] = set()
+
+    for request_id in request_ids:
+        task = get_task(config, request_id)
+        if task is None or task.status != "completed" or task.output_path is None:
+            invalid_ids.append(request_id)
+            continue
+
+        resolved = _safe_resolve(config.output_dir, str(task.output_path))
+        if resolved is None or not resolved.is_file():
+            invalid_ids.append(request_id)
+            continue
+
+        entries.append((resolved, _unique_archive_name(resolved.name, archive_names)))
+
+    if invalid_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"这些任务没有可下载结果：{', '.join(invalid_ids[:5])}",
+        )
+    if not entries:
+        raise HTTPException(status_code=400, detail="没有可下载结果。")
+
+    archive_path = _create_output_archive(config.output_dir.parent, entries)
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename=f"pixloom-results-{strftime('%Y%m%d-%H%M%S')}.zip",
+        background=BackgroundTask(_unlink_file, archive_path),
+    )
+
+
 @router.get("/input/{path:path}")
 def serve_input(path: str, request: Request):
     config = request.app.state.config
@@ -56,6 +120,52 @@ def serve_input(path: str, request: Request):
     if resolved is None or not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(resolved)
+
+
+def _unique_archive_name(name: str, used: set[str]) -> str:
+    if name not in used:
+        used.add(name)
+        return name
+
+    path = Path(name)
+    stem = path.stem
+    suffix = path.suffix
+    index = 2
+    while True:
+        candidate = f"{stem}-{index}{suffix}"
+        if candidate not in used:
+            used.add(candidate)
+            return candidate
+        index += 1
+
+
+def _create_output_archive(
+    temp_root: Path,
+    entries: list[tuple[Path, str]],
+) -> Path:
+    temp_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        prefix="pixloom-results-",
+        suffix=".zip",
+        dir=temp_root,
+        delete=False,
+    ) as handle:
+        archive_path = Path(handle.name)
+
+    try:
+        with zipfile.ZipFile(
+            archive_path,
+            mode="w",
+            compression=zipfile.ZIP_STORED,
+            allowZip64=True,
+        ) as archive:
+            for path, archive_name in entries:
+                archive.write(path, arcname=archive_name)
+    except Exception:
+        _unlink_file(archive_path)
+        raise
+
+    return archive_path
 
 
 def _thumbnail_cache_path(
@@ -91,6 +201,10 @@ def _generate_thumbnail(source: Path, cache_path: Path, size: int) -> None:
         raise HTTPException(status_code=415, detail="Unsupported image file") from exc
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+def _unlink_file(path: Path) -> None:
+    path.unlink(missing_ok=True)
 
 
 def _safe_resolve(root: Path, subpath: str) -> Path | None:

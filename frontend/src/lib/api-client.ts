@@ -10,6 +10,25 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
+function errorMessageFromBody(body: unknown, status: number): string {
+  if (body && typeof body === "object" && "detail" in body) {
+    const detail = (body as { detail?: unknown }).detail;
+    if (detail && typeof detail === "object") {
+      const typed = detail as {
+        user_message_zh?: string;
+        code?: string;
+        request_id?: string;
+      };
+      if (typed.user_message_zh) return typed.user_message_zh;
+      if (typed.code && typed.request_id) {
+        return `错误 [${typed.code}]，请求编号：${typed.request_id}`;
+      }
+    }
+    if (typeof detail === "string") return detail;
+  }
+  return `Request failed: ${status}`;
+}
+
 async function request<T>(
   path: string,
   options?: RequestInit
@@ -27,14 +46,7 @@ async function request<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    const message =
-      body?.detail?.user_message_zh ||
-      (body?.detail?.code && body?.detail?.request_id
-        ? `错误 [${body.detail.code}]，请求编号：${body.detail.request_id}`
-        : "") ||
-      body?.detail ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw new Error(errorMessageFromBody(body, res.status));
   }
 
   return res.json();
@@ -72,5 +84,11 @@ export const apiClient = {
 
   getRequestLog(requestId: string): Promise<LogExcerptResponse> {
     return request(`/logs/${requestId}`);
+  },
+
+  taskArchiveUrl(requestIds: string[]): string {
+    const params = new URLSearchParams();
+    requestIds.forEach((requestId) => params.append("request_id", requestId));
+    return `${API_BASE}/files/output-archive?${params.toString()}`;
   },
 };

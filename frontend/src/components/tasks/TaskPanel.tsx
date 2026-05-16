@@ -11,10 +11,11 @@ import {
 } from "lucide-react";
 import type { TaskRecord, TaskStatus } from "@/lib/types";
 import { zh } from "@/i18n/zh";
+import { apiClient } from "@/lib/api-client";
 import { RequestLogs } from "@/components/logs/RequestLogs";
 import { StatusBadge } from "./StatusBadge";
 import { TaskFilterBar, applyFilters } from "./TaskFilterBar";
-import { BatchActionBar, downloadFiles } from "./BatchActionBar";
+import { BatchActionBar } from "./BatchActionBar";
 
 function formatTime(iso: string) {
   return iso.slice(11, 16);
@@ -38,6 +39,15 @@ function thumbnailUrl(outputPath: string | null, size = 160) {
   if (!outputPath) return null;
   const name = outputPath.replace(/^.*[\\/]/, "");
   return `/api/files/output-thumbnail/${encodeURIComponent(name)}?size=${size}`;
+}
+
+function triggerUrlDownload(url: string) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 interface TaskPanelProps {
@@ -67,6 +77,7 @@ export function TaskPanel({
   const [timeFilter, setTimeFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailOpen, setDetailOpen] = useState(false);
+  const [downloadPending, setDownloadPending] = useState(false);
 
   const filteredTasks = useMemo(
     () => applyFilters(tasks, statusFilter, timeFilter),
@@ -105,11 +116,14 @@ export function TaskPanel({
   };
 
   const handleBatchDownload = () => {
-    const urls = selectableTasks
+    const requestIds = selectableTasks
       .filter((t) => selectedIds.has(t.request_id))
-      .map((t) => fileUrl(t.output_path))
-      .filter((u): u is string => u !== null);
-    downloadFiles(urls);
+      .map((t) => t.request_id);
+    if (requestIds.length === 0) return;
+
+    setDownloadPending(true);
+    triggerUrlDownload(apiClient.taskArchiveUrl(requestIds));
+    window.setTimeout(() => setDownloadPending(false), 1500);
   };
 
   const handleSelectAll = () => {
@@ -195,6 +209,7 @@ export function TaskPanel({
         selectedIds={selectedIds}
         selectableCount={selectableTasks.length}
         allSelected={allSelectableSelected}
+        downloadPending={downloadPending}
         onSelectAll={handleSelectAll}
         onDownload={handleBatchDownload}
         onClear={handleClearSelection}

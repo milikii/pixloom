@@ -187,6 +187,8 @@ canvas, and output remains bounded by `PIXLOOM_MAX_OUTPUT_SIDE`.
 - `GET /api/files/input/{path}`
 - `GET /api/files/output/{path}`
 - `GET /api/files/output-thumbnail/{path}`
+- `GET /api/files/output-archive`
+- `POST /api/files/output-archive`
 
 ## Security Boundary
 
