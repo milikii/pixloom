@@ -40,11 +40,13 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
    - `GET /api/logs/{request_id}`
    - `GET /api/files/input/{path}`
    - `GET /api/files/output/{path}`
+   - `GET /api/files/output-thumbnail/{path}`
 
 5. React frontend.
    - Next.js SPA under `frontend/`.
    - Chinese-first submission, model guidance, task list, logs, preview, and delete
      flows.
+   - Cached task-row thumbnails and current-filter select-all for completed tasks.
    - Tailwind v4 semantic design tokens.
    - Static export for production deployment.
 

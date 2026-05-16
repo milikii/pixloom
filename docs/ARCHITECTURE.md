@@ -135,7 +135,9 @@ Persist result to output/
 Mark task completed in SQLite
   |
   v
-React polls /api/tasks and displays preview/download through /api/files/output/*
+React polls /api/tasks, displays selected previews/downloads through
+/api/files/output/*, and uses cached thumbnails from /api/files/output-thumbnail/*
+for task rows
 ```
 
 ## Task Queue Contract
@@ -184,6 +186,7 @@ canvas, and output remains bounded by `PIXLOOM_MAX_OUTPUT_SIDE`.
 - `GET /api/logs/{request_id}`
 - `GET /api/files/input/{path}`
 - `GET /api/files/output/{path}`
+- `GET /api/files/output-thumbnail/{path}`
 
 ## Security Boundary
 
@@ -195,7 +198,8 @@ Application responsibilities:
 - Save outputs only under `output/`.
 - Assign a request id to every upscale attempt.
 - Write append-only structured JSONL logs.
-- Serve files only through safe `/api/files/*` path resolution.
+- Serve files and generated thumbnails only through safe `/api/files/*` path
+  resolution.
 - Show Chinese-first errors without dumping secrets or full tracebacks into the UI.
 
 Host nginx responsibilities:

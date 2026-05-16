@@ -12,6 +12,7 @@ def test_load_config_uses_defaults(monkeypatch):
     monkeypatch.delenv("PIXLOOM_BUNDLED_MODELS_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_INPUT_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_OUTPUT_DIR", raising=False)
+    monkeypatch.delenv("PIXLOOM_THUMBNAIL_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_LOGS_DIR", raising=False)
     monkeypatch.delenv("PIXLOOM_DB_PATH", raising=False)
     monkeypatch.delenv("PIXLOOM_MAX_INPUT_SIDE", raising=False)
@@ -28,6 +29,7 @@ def test_load_config_uses_defaults(monkeypatch):
     assert config.bundled_models_dir == Path("bundled-models")
     assert config.input_dir == Path("input")
     assert config.output_dir == Path("output")
+    assert config.thumbnail_dir == Path("thumbnails")
     assert config.logs_dir == Path("logs")
     assert config.db_path == Path("state/pixloom.sqlite3")
     assert config.max_input_side == 2048
@@ -44,6 +46,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("PIXLOOM_BUNDLED_MODELS_DIR", str(tmp_path / "bm"))
     monkeypatch.setenv("PIXLOOM_INPUT_DIR", str(tmp_path / "i"))
     monkeypatch.setenv("PIXLOOM_OUTPUT_DIR", str(tmp_path / "o"))
+    monkeypatch.setenv("PIXLOOM_THUMBNAIL_DIR", str(tmp_path / "t"))
     monkeypatch.setenv("PIXLOOM_LOGS_DIR", str(tmp_path / "l"))
     monkeypatch.setenv("PIXLOOM_DB_PATH", str(tmp_path / "state" / "pixloom.sqlite3"))
     monkeypatch.setenv("PIXLOOM_MAX_INPUT_SIDE", "1024")
@@ -60,6 +63,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     assert config.bundled_models_dir == tmp_path / "bm"
     assert config.input_dir == tmp_path / "i"
     assert config.output_dir == tmp_path / "o"
+    assert config.thumbnail_dir == tmp_path / "t"
     assert config.logs_dir == tmp_path / "l"
     assert config.db_path == tmp_path / "state" / "pixloom.sqlite3"
     assert config.max_input_side == 1024
@@ -77,6 +81,7 @@ def test_app_config_ensures_directories(tmp_path):
         bundled_models_dir=tmp_path / "bundled-models",
         input_dir=tmp_path / "input",
         output_dir=tmp_path / "output",
+        thumbnail_dir=tmp_path / "thumbnails",
         logs_dir=tmp_path / "logs",
         db_path=tmp_path / "state" / "pixloom.sqlite3",
     )
@@ -86,6 +91,7 @@ def test_app_config_ensures_directories(tmp_path):
     assert config.models_dir.is_dir()
     assert config.input_dir.is_dir()
     assert config.output_dir.is_dir()
+    assert config.thumbnail_dir.is_dir()
     assert config.logs_dir.is_dir()
     assert config.db_path.parent.is_dir()
 

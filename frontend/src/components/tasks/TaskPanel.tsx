@@ -34,6 +34,12 @@ function fileUrl(outputPath: string | null) {
   return `/api/files/output/${encodeURIComponent(name)}`;
 }
 
+function thumbnailUrl(outputPath: string | null, size = 160) {
+  if (!outputPath) return null;
+  const name = outputPath.replace(/^.*[\\/]/, "");
+  return `/api/files/output-thumbnail/${encodeURIComponent(name)}?size=${size}`;
+}
+
 interface TaskPanelProps {
   tasks: TaskRecord[];
   selectedTask: TaskRecord | null;
@@ -85,6 +91,9 @@ export function TaskPanel({
   const selectableTasks = filteredTasks.filter(
     (t) => t.status === "completed" && t.output_path,
   );
+  const allSelectableSelected =
+    selectableTasks.length > 0 &&
+    selectableTasks.every((t) => selectedIds.has(t.request_id));
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -101,6 +110,10 @@ export function TaskPanel({
       .map((t) => fileUrl(t.output_path))
       .filter((u): u is string => u !== null);
     downloadFiles(urls);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(selectableTasks.map((t) => t.request_id)));
   };
 
   const handleClearSelection = () => setSelectedIds(new Set());
@@ -134,6 +147,7 @@ export function TaskPanel({
         <img
           src={previewUrl}
           alt={`${selectedTask.input_filename} 放大结果`}
+          decoding="async"
           className="w-full"
         />
         <div className="flex items-center gap-3 border-t border-border px-4 py-3">
@@ -179,6 +193,9 @@ export function TaskPanel({
 
       <BatchActionBar
         selectedIds={selectedIds}
+        selectableCount={selectableTasks.length}
+        allSelected={allSelectableSelected}
+        onSelectAll={handleSelectAll}
         onDownload={handleBatchDownload}
         onClear={handleClearSelection}
       />
@@ -190,7 +207,7 @@ export function TaskPanel({
           </p>
         ) : (
           filteredTasks.map((t) => {
-            const thumb = fileUrl(t.output_path);
+            const thumb = thumbnailUrl(t.output_path);
             const isSelected = selectedId === t.request_id;
             const isChecked = selectedIds.has(t.request_id);
             const isSelectable = t.status === "completed" && !!t.output_path;
@@ -243,6 +260,7 @@ export function TaskPanel({
                       <img
                         src={thumb}
                         alt=""
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                     </div>

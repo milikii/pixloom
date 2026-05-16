@@ -11,6 +11,7 @@ class AppConfig:
     bundled_models_dir: Path = Path("bundled-models")
     input_dir: Path = Path("input")
     output_dir: Path = Path("output")
+    thumbnail_dir: Path = Path("thumbnails")
     logs_dir: Path = Path("logs")
     db_path: Path = Path("state/pixloom.sqlite3")
     max_input_side: int = 2048
@@ -25,6 +26,7 @@ class AppConfig:
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.input_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -54,13 +56,20 @@ def _env_non_negative_int(name: str, default: int) -> int:
 
 
 def load_config() -> AppConfig:
+    output_dir = _env_path("PIXLOOM_OUTPUT_DIR", "output")
+    thumbnail_dir = _env_path(
+        "PIXLOOM_THUMBNAIL_DIR",
+        str(output_dir.parent / "thumbnails"),
+    )
+
     return AppConfig(
         models_dir=_env_path("PIXLOOM_MODELS_DIR", "models"),
         bundled_models_dir=_env_path(
             "PIXLOOM_BUNDLED_MODELS_DIR", "bundled-models"
         ),
         input_dir=_env_path("PIXLOOM_INPUT_DIR", "input"),
-        output_dir=_env_path("PIXLOOM_OUTPUT_DIR", "output"),
+        output_dir=output_dir,
+        thumbnail_dir=thumbnail_dir,
         logs_dir=_env_path("PIXLOOM_LOGS_DIR", "logs"),
         db_path=_env_path("PIXLOOM_DB_PATH", "state/pixloom.sqlite3"),
         max_input_side=_env_int("PIXLOOM_MAX_INPUT_SIDE", 2048),

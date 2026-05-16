@@ -40,6 +40,9 @@ inference, SQLite tasks, history cleanup, and request logging.
 - The task panel keeps the selected result preview visible above the task list so
   clicking a task immediately updates the visible output; request logs stay in the
   same panel and partial batch completion remains highlighted.
+- Task rows now use cached WebP thumbnails instead of loading original 4K/8K output
+  files, and the batch action bar can select every completed task in the current
+  filtered list.
 - Frontend/backend execution guidance updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice

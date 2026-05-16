@@ -4,11 +4,12 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from PIL import Image
 
 from app.config import AppConfig
 from app.tasks import claim_queued_task, list_tasks, mark_task_completed
 from backend.pixloom_api.main import create_app
-from backend.pixloom_api.routers import batches, health, models, tasks
+from backend.pixloom_api.routers import batches, files, health, models, tasks
 
 
 def _config(tmp_path: Path) -> AppConfig:
@@ -17,6 +18,7 @@ def _config(tmp_path: Path) -> AppConfig:
         bundled_models_dir=tmp_path / "bundled-models",
         input_dir=tmp_path / "input",
         output_dir=tmp_path / "output",
+        thumbnail_dir=tmp_path / "thumbnails",
         logs_dir=tmp_path / "logs",
         db_path=tmp_path / "state" / "pixloom.sqlite3",
     )
@@ -172,6 +174,32 @@ def test_delete_task_endpoint_returns_file_action_details(tmp_path):
     assert body["missing_paths"] == []
     assert body["skipped_paths"] == []
     assert "已删除任务" in body["message_zh"]
+
+
+def test_output_thumbnail_endpoint_generates_cached_webp(tmp_path):
+    config = _config(tmp_path)
+    config.ensure_directories()
+    output_path = config.output_dir / "large-result.png"
+    Image.new("RGB", (800, 400), color=(12, 34, 56)).save(output_path)
+    request = type(
+        "Req",
+        (),
+        {"app": type("App", (), {"state": type("State", (), {"config": config})()})()},
+    )()
+
+    response = files.serve_output_thumbnail("large-result.png", request, size=96)
+    cached_path = Path(response.path)
+
+    assert response.media_type == "image/webp"
+    assert cached_path.is_file()
+    assert cached_path.parent == config.thumbnail_dir
+
+    with Image.open(cached_path) as thumbnail:
+        assert thumbnail.format == "WEBP"
+        assert max(thumbnail.size) == 96
+
+    cached_again = files.serve_output_thumbnail("large-result.png", request, size=96)
+    assert Path(cached_again.path) == cached_path
 
 
 def test_create_app_mounts_frontend_static_export(tmp_path, monkeypatch):
