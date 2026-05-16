@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.bundled_models import sync_bundled_models
 from app.config import load_config
+from app.storage import cleanup_stale_archives, cleanup_stale_thumbnails
 from app.tasks import initialize_task_store, mark_running_tasks_interrupted
 
 from backend.pixloom_api.routers import (
@@ -19,6 +20,7 @@ from backend.pixloom_api.routers import (
     health,
     logs,
     models,
+    storage,
     tasks,
     upload,
 )
@@ -32,6 +34,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     sync_bundled_models(config)
     initialize_task_store(config)
     mark_running_tasks_interrupted(config)
+    cleanup_stale_archives(config)
+    cleanup_stale_thumbnails(config)
 
     worker = BackgroundTaskWorker(config=config)
     worker.start()
@@ -65,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router, prefix="/api")
     app.include_router(logs.router, prefix="/api")
     app.include_router(files.router, prefix="/api")
+    app.include_router(storage.router, prefix="/api")
 
     frontend_dist = _frontend_dist_path()
     if frontend_dist.is_dir():

@@ -22,6 +22,7 @@ def test_load_config_uses_defaults(monkeypatch):
     monkeypatch.delenv("PIXLOOM_TILE_OVERLAP", raising=False)
     monkeypatch.delenv("PIXLOOM_HISTORY_LIMIT", raising=False)
     monkeypatch.delenv("PIXLOOM_HISTORY_RETENTION_DAYS", raising=False)
+    monkeypatch.delenv("PIXLOOM_ARCHIVE_TTL_HOURS", raising=False)
 
     config = load_config()
 
@@ -38,7 +39,8 @@ def test_load_config_uses_defaults(monkeypatch):
     assert config.tile_size == 256
     assert config.tile_overlap == 16
     assert config.history_limit == 60
-    assert config.history_retention_days == 0
+    assert config.history_retention_days == 30
+    assert config.archive_ttl_hours == 24
 
 
 def test_load_config_reads_environment(monkeypatch, tmp_path):
@@ -56,6 +58,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("PIXLOOM_TILE_OVERLAP", "8")
     monkeypatch.setenv("PIXLOOM_HISTORY_LIMIT", "20")
     monkeypatch.setenv("PIXLOOM_HISTORY_RETENTION_DAYS", "14")
+    monkeypatch.setenv("PIXLOOM_ARCHIVE_TTL_HOURS", "6")
 
     config = load_config()
 
@@ -73,6 +76,7 @@ def test_load_config_reads_environment(monkeypatch, tmp_path):
     assert config.tile_overlap == 8
     assert config.history_limit == 20
     assert config.history_retention_days == 14
+    assert config.archive_ttl_hours == 6
 
 
 def test_app_config_ensures_directories(tmp_path):
@@ -115,4 +119,11 @@ def test_load_config_rejects_negative_history_retention(monkeypatch):
     monkeypatch.setenv("PIXLOOM_HISTORY_RETENTION_DAYS", "-1")
 
     with pytest.raises(ValueError, match="PIXLOOM_HISTORY_RETENTION_DAYS"):
+        load_config()
+
+
+def test_load_config_rejects_zero_archive_ttl(monkeypatch):
+    monkeypatch.setenv("PIXLOOM_ARCHIVE_TTL_HOURS", "0")
+
+    with pytest.raises(ValueError, match="PIXLOOM_ARCHIVE_TTL_HOURS"):
         load_config()

@@ -113,6 +113,47 @@ export interface LogExcerptResponse {
   excerpt: string;
 }
 
+export interface StorageCategory {
+  key:
+    | "models"
+    | "input"
+    | "output"
+    | "thumbnails"
+    | "logs"
+    | "state"
+    | "archives";
+  label_zh: string;
+  description_zh: string;
+  path: string;
+  bytes: number;
+  file_count: number;
+  percent_of_managed: number;
+}
+
+export interface StorageSnapshot {
+  generated_at: string;
+  total_managed_bytes: number;
+  disk: {
+    total_bytes: number;
+    used_bytes: number;
+    free_bytes: number;
+    used_percent: number;
+  };
+  retention: {
+    enabled: boolean;
+    days: number;
+    archive_ttl_hours: number;
+    message_zh: string;
+  };
+  categories: StorageCategory[];
+  cleanup: {
+    stale_archives_deleted: number;
+    stale_archive_bytes_deleted: number;
+    stale_thumbnails_deleted: number;
+    stale_thumbnail_bytes_deleted: number;
+  };
+}
+
 export interface ErrorDetail {
   request_id: string;
   code: string;

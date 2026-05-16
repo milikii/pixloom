@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import datetime, timedelta, timezone
 
 from PIL import Image
@@ -12,13 +13,22 @@ from app.history import (
     list_history_items,
 )
 from app.request_logging import log_event
+from app.tasks import (
+    claim_queued_task,
+    create_batch,
+    enqueue_task,
+    get_task,
+    mark_task_completed,
+)
 
 
 def _config(tmp_path, retention_days: int = 0) -> AppConfig:
     return AppConfig(
         input_dir=tmp_path / "input",
         output_dir=tmp_path / "output",
+        thumbnail_dir=tmp_path / "thumbnails",
         logs_dir=tmp_path / "logs",
+        db_path=tmp_path / "state" / "pixloom.sqlite3",
         history_retention_days=retention_days,
     )
 
@@ -159,3 +169,56 @@ def test_cleanup_expired_history_is_disabled_when_retention_is_zero(tmp_path):
     assert result.skipped
     assert input_path.exists()
     assert output_path.exists()
+
+
+def test_cleanup_expired_history_marks_old_sqlite_tasks_deleted(tmp_path):
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(days=10)).isoformat()
+    config = _config(tmp_path, retention_days=7)
+    input_path = _image(config.input_dir / "source.png")
+    output_path = _image(config.output_dir / "result.png")
+
+    create_batch(
+        config,
+        batch_id="batch-1",
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=100,
+        total_count=1,
+    )
+    enqueue_task(
+        config,
+        request_id="req-old",
+        batch_id="batch-1",
+        input_filename="source.png",
+        input_path=input_path,
+        model_id="fake-4x",
+        output_format="PNG",
+        quality=100,
+    )
+    claim_queued_task(config, "req-old")
+    mark_task_completed(
+        config,
+        request_id="req-old",
+        output_path=output_path,
+        elapsed_seconds=1.0,
+    )
+    with sqlite3.connect(config.db_path) as connection:
+        connection.execute(
+            """
+            UPDATE tasks
+            SET created_at = ?, started_at = ?, completed_at = ?
+            WHERE request_id = ?
+            """,
+            (old, old, old, "req-old"),
+        )
+
+    result = cleanup_expired_history(config)
+    task = get_task(config, "req-old")
+
+    assert not result.skipped
+    assert "req-old" in result.pruned_requests
+    assert task is not None
+    assert task.status == "deleted"
+    assert not input_path.exists()
+    assert not output_path.exists()

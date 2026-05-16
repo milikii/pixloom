@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.config import AppConfig
+from app.storage import thumbnail_cache_path
 from app.tasks import (
     claim_next_queued_task,
     claim_queued_task,
@@ -28,6 +29,7 @@ def _config(tmp_path: Path) -> AppConfig:
     return AppConfig(
         input_dir=tmp_path / "input",
         output_dir=tmp_path / "output",
+        thumbnail_dir=tmp_path / "thumbnails",
         logs_dir=tmp_path / "logs",
         db_path=tmp_path / "state" / "pixloom.sqlite3",
     )
@@ -277,6 +279,9 @@ def test_delete_task_removes_safe_input_and_output_files(tmp_path):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     input_path.write_bytes(b"input")
     output_path.write_bytes(b"output")
+    thumbnail_path = thumbnail_cache_path(config, output_path, 160)
+    thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+    thumbnail_path.write_bytes(b"thumbnail")
     _create_batch(config)
     enqueue_task(
         config,
@@ -303,8 +308,10 @@ def test_delete_task_removes_safe_input_and_output_files(tmp_path):
     assert task.status == "deleted"
     assert input_path in result.deleted_paths
     assert output_path in result.deleted_paths
+    assert thumbnail_path in result.deleted_paths
     assert not input_path.exists()
     assert not output_path.exists()
+    assert not thumbnail_path.exists()
     assert "已删除任务：req-1" in result.message_zh
 
     log_text = next(config.logs_dir.glob("pixloom-*.jsonl")).read_text(encoding="utf-8")

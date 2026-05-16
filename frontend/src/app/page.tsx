@@ -9,8 +9,10 @@ import { ModelPicker } from "@/components/submission/ModelPicker";
 import { ModelGuidance } from "@/components/submission/ModelGuidance";
 import { OutputParams } from "@/components/submission/OutputParams";
 import { SubmitButton } from "@/components/submission/SubmitButton";
+import { StorageStatus } from "@/components/storage/StorageStatus";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { useModels } from "@/hooks/useModels";
+import { useStorage } from "@/hooks/useStorage";
 import { useTasks, useTaskDelete, useRequestLog } from "@/hooks/useTasks";
 import { useFileUpload, useSubmitBatch } from "@/hooks/useSubmitBatch";
 import type { TaskRecord, ResolvedModel, OutputSizePreset } from "@/lib/types";
@@ -27,6 +29,7 @@ export default function HomePage() {
 
   const { data: modelData } = useModels();
   const { data: taskData, refetch: refetchTasks } = useTasks(60);
+  const { data: storageData, isLoading: storageLoading } = useStorage();
   const { data: logData } =
     useRequestLog(selectedTaskId);
   const fileUpload = useFileUpload();
@@ -150,6 +153,8 @@ export default function HomePage() {
             loading={isSubmitting}
             disabled={selectedFiles.length === 0 || !effectiveModelId}
           />
+
+          <StorageStatus snapshot={storageData} loading={storageLoading} />
         </div>
 
         {/* RIGHT: Tasks + Preview */}

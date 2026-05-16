@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 import tempfile
 from time import strftime
@@ -15,6 +14,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
+from app.storage import thumbnail_cache_path
 from app.tasks import get_task
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -44,12 +44,7 @@ def serve_output_thumbnail(
     if resolved is None or not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    cache_path = _thumbnail_cache_path(
-        source=resolved,
-        output_root=config.output_dir,
-        cache_dir=config.thumbnail_dir,
-        size=size,
-    )
+    cache_path = thumbnail_cache_path(config=config, source=resolved, size=size)
     if not cache_path.is_file():
         _generate_thumbnail(source=resolved, cache_path=cache_path, size=size)
 
@@ -166,21 +161,6 @@ def _create_output_archive(
         raise
 
     return archive_path
-
-
-def _thumbnail_cache_path(
-    source: Path,
-    output_root: Path,
-    cache_dir: Path,
-    size: int,
-) -> Path:
-    stat = source.stat()
-    root_resolved = output_root.resolve()
-    relative = source.resolve().relative_to(root_resolved).as_posix()
-    key = hashlib.sha256(
-        f"{relative}:{stat.st_size}:{stat.st_mtime_ns}:{size}".encode("utf-8")
-    ).hexdigest()
-    return cache_dir / f"{key}.webp"
 
 
 def _generate_thumbnail(source: Path, cache_path: Path, size: int) -> None:

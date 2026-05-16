@@ -38,6 +38,7 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
    - `GET /api/tasks`
    - `DELETE /api/tasks/{request_id}`
    - `GET /api/logs/{request_id}`
+   - `GET /api/storage`
    - `GET /api/files/input/{path}`
    - `GET /api/files/output/{path}`
    - `GET /api/files/output-thumbnail/{path}`
@@ -49,6 +50,8 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
    - Chinese-first submission, model guidance, task list, logs, preview, and delete
      flows.
    - Cached task-row thumbnails and zip download for selected completed tasks.
+   - Storage status panel for models, uploads, outputs, thumbnails, logs, SQLite
+     state, and temporary download archives.
    - Tailwind v4 semantic design tokens.
    - Static export for production deployment.
 
@@ -63,6 +66,12 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
    - Project execution guidance now points future agents at React/FastAPI rather than the removed
      Gradio entrypoint.
 
+8. Storage lifecycle.
+   - Finished task files default to 30-day retention, configurable through
+     `PIXLOOM_HISTORY_RETENTION_DAYS`.
+   - Manual task deletion removes linked uploads, outputs, and cached thumbnails.
+   - Stale batch-download zip files are swept after `PIXLOOM_ARCHIVE_TTL_HOURS`.
+
 ## Current Verification Targets
 
 - `.venv/bin/pytest -q`
@@ -76,7 +85,7 @@ Pixloom now ships as one React/FastAPI Docker service on port `7860`.
 ## P1
 
 1. Add resource telemetry: memory estimate, tile size, and per-stage timings.
-2. Add a dry-run cleanup command if operators need a CLI preview before enabling
+2. Add a dry-run cleanup command if operators need a CLI preview before changing
    retention cleanup.
 
 ## Explicitly Deferred

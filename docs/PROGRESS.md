@@ -1,6 +1,6 @@
 # Pixloom Progress
 
-Last updated: 2026-05-08
+Last updated: 2026-05-17
 
 ## Current Phase
 
@@ -43,6 +43,9 @@ inference, SQLite tasks, history cleanup, and request logging.
 - Task rows now use cached WebP thumbnails instead of loading original 4K/8K output
   files, and the batch action bar can select every completed task in the current
   filtered list and download them as one zip archive.
+- Storage governance is now visible and enforced: the UI shows managed storage by
+  category, finished task files default to 30-day retention, manual deletion also
+  clears cached thumbnails, and stale batch-download zip files are swept.
 - Frontend/backend execution guidance updated so future agents target React/FastAPI.
 
 ## Verification To Run For This Slice

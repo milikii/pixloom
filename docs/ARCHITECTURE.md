@@ -74,6 +74,7 @@ Pixloom keeps image artifacts on the filesystem and stores task state in SQLite.
 
 - Successful uploads are persisted under `input/`.
 - Successful upscaled images are persisted under `output/`.
+- Task-row preview thumbnails are cached under `thumbnails/`.
 - Request audit events are appended under `logs/`.
 - Task and batch rows are stored under `state/pixloom.sqlite3` by default.
 - Optional image-model defaults can be baked into the image under
@@ -81,10 +82,15 @@ Pixloom keeps image artifacts on the filesystem and stores task state in SQLite.
   file is missing.
 - Failed requests roll back output files created by that request when possible.
 - The task list is rebuilt from SQLite task rows through `/api/tasks`.
-- Deleting a task deletes linked input/output files when those paths are safely
-  inside `input/` and `output/`, marks the row `deleted`, and logs `task_deleted`.
-- Retention cleanup is disabled by default and enabled only when
-  `PIXLOOM_HISTORY_RETENTION_DAYS` is set to a positive day count.
+- Deleting a task deletes linked input/output files and known cached thumbnails
+  when those paths are safely inside managed runtime directories, marks the row
+  `deleted`, and logs `task_deleted`.
+- Retention cleanup keeps the most recent 30 days of finished task files by
+  default. `PIXLOOM_HISTORY_RETENTION_DAYS=0` disables task-file retention.
+- Batch download archives use `pixloom-results-*.zip`, are removed after the
+  response when possible, and are also swept after `PIXLOOM_ARCHIVE_TTL_HOURS`
+  hours so interrupted downloads do not accumulate.
+- `GET /api/storage` reports managed bytes by category and current disk usage.
 - On app startup, any task left as `running` is marked `interrupted`.
 
 SQLite is the task status source of truth. `logs/` provide request audit metadata;
@@ -184,6 +190,7 @@ canvas, and output remains bounded by `PIXLOOM_MAX_OUTPUT_SIDE`.
 - `GET /api/tasks`
 - `DELETE /api/tasks/{request_id}`
 - `GET /api/logs/{request_id}`
+- `GET /api/storage`
 - `GET /api/files/input/{path}`
 - `GET /api/files/output/{path}`
 - `GET /api/files/output-thumbnail/{path}`
@@ -202,6 +209,7 @@ Application responsibilities:
 - Write append-only structured JSONL logs.
 - Serve files and generated thumbnails only through safe `/api/files/*` path
   resolution.
+- Report storage usage only for configured managed runtime paths.
 - Show Chinese-first errors without dumping secrets or full tracebacks into the UI.
 
 Host nginx responsibilities:

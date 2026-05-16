@@ -20,7 +20,8 @@ class AppConfig:
     tile_size: int = 256
     tile_overlap: int = 16
     history_limit: int = 60
-    history_retention_days: int = 0
+    history_retention_days: int = 30
+    archive_ttl_hours: int = 24
 
     def ensure_directories(self) -> None:
         self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -79,6 +80,7 @@ def load_config() -> AppConfig:
         tile_overlap=_env_non_negative_int("PIXLOOM_TILE_OVERLAP", 16),
         history_limit=_env_int("PIXLOOM_HISTORY_LIMIT", 60),
         history_retention_days=_env_non_negative_int(
-            "PIXLOOM_HISTORY_RETENTION_DAYS", 0
+            "PIXLOOM_HISTORY_RETENTION_DAYS", 30
         ),
+        archive_ttl_hours=_env_int("PIXLOOM_ARCHIVE_TTL_HOURS", 24),
     )

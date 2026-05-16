@@ -7,9 +7,10 @@ from pathlib import Path
 
 from app.config import AppConfig
 from app.request_logging import log_event
+from app.storage import cleanup_stale_thumbnails, delete_output_thumbnails
 
 
-DELETION_EVENTS = {"history_deleted", "history_pruned"}
+DELETION_EVENTS = {"history_deleted", "history_pruned", "task_deleted"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
@@ -168,6 +169,8 @@ def delete_history_item(config: AppConfig, request_id: str) -> HistoryDeleteResu
     for path in (item.output_path, item.input_path):
         if path is None:
             continue
+        if path == item.output_path:
+            deleted_paths.extend(delete_output_thumbnails(config, path))
         if _unlink_file(path):
             deleted_paths.append(path)
         else:
@@ -222,15 +225,21 @@ def cleanup_expired_history(config: AppConfig) -> HistoryCleanupResult:
         return HistoryCleanupResult(skipped=True)
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=config.history_retention_days)
+    task_pruned_paths, task_pruned_requests = _cleanup_expired_task_records(
+        config=config,
+        cutoff=cutoff,
+    )
     items = list_history_items(config)
     expired = [item for item in items if item.timestamp < cutoff]
     kept = [item for item in items if item.timestamp >= cutoff]
 
-    deleted_paths: list[Path] = []
-    pruned_requests: list[str] = []
+    deleted_paths: list[Path] = list(task_pruned_paths)
+    pruned_requests: list[str] = list(task_pruned_requests)
     for item in expired:
         removed_for_item = []
         for path in (item.output_path, item.input_path):
+            if path == item.output_path:
+                deleted_paths.extend(delete_output_thumbnails(config, path))
             if path is not None and _unlink_file(path):
                 removed_for_item.append(path)
                 deleted_paths.append(path)
@@ -267,9 +276,32 @@ def cleanup_expired_history(config: AppConfig) -> HistoryCleanupResult:
             keep_paths=keep_output_paths,
         )
     )
+    deleted_paths.extend(cleanup_stale_thumbnails(config).deleted_paths)
 
     return HistoryCleanupResult(
         deleted_paths=tuple(deleted_paths),
         pruned_requests=tuple(pruned_requests),
         skipped=False,
     )
+
+
+def _cleanup_expired_task_records(
+    *,
+    config: AppConfig,
+    cutoff: datetime,
+) -> tuple[tuple[Path, ...], tuple[str, ...]]:
+    from app.tasks import delete_task, list_tasks
+
+    deleted_paths: list[Path] = []
+    pruned_requests: list[str] = []
+    for task in list_tasks(config, limit=None):
+        if task.status in {"queued", "running", "deleted"}:
+            continue
+        task_time = task.completed_at or task.started_at or task.created_at
+        if task_time >= cutoff:
+            continue
+        result = delete_task(config, task.request_id)
+        deleted_paths.extend(result.deleted_paths)
+        if result.deleted_paths or result.missing_paths:
+            pruned_requests.append(task.request_id)
+    return tuple(deleted_paths), tuple(pruned_requests)

@@ -57,9 +57,12 @@ services:
 /data/models/              # 模型文件
 /data/input/               # 上传的原图
 /data/output/              # 放大后的图片
+/data/thumbnails/          # 任务列表缩略图缓存
 /data/logs/                # 请求审计日志
 /data/state/pixloom.sqlite3 # 任务状态
 ```
+
+默认会保留最近 30 天的任务文件；临时批量下载 zip 保留 24 小时并在下载完成后尽快删除。前端“存储状态”面板会显示模型、上传原图、放大结果、缩略图、日志、状态数据库和临时下载包的占用。
 
 ---
 
@@ -105,6 +108,9 @@ curl http://127.0.0.1:7860/api/models
 
 # 任务列表
 curl http://127.0.0.1:7860/api/tasks
+
+# 存储状态
+curl http://127.0.0.1:7860/api/storage
 ```
 
 ---
@@ -121,7 +127,9 @@ curl http://127.0.0.1:7860/api/tasks
 | `PIXLOOM_TILE_SIZE` | 推理分块大小 |
 | `PIXLOOM_TILE_OVERLAP` | 分块重叠像素 |
 | `PIXLOOM_HISTORY_LIMIT` | 历史记录条数上限 |
-| `PIXLOOM_HISTORY_RETENTION_DAYS` | 历史保留天数 |
+| `PIXLOOM_HISTORY_RETENTION_DAYS` | 任务文件保留天数，默认 30；设为 0 可关闭 |
+| `PIXLOOM_ARCHIVE_TTL_HOURS` | 临时批量下载 zip 保留小时数，默认 24 |
+| `PIXLOOM_THUMBNAIL_DIR` | 缩略图缓存目录 |
 
 ---
 

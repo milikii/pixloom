@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.config import AppConfig
 from app.output_size import output_size_label_zh
+from app.storage import cleanup_stale_archives
 from app.tasks import delete_task, get_task, list_tasks
 from app.history import cleanup_expired_history
 from backend.pixloom_api.deps import get_config
@@ -86,6 +87,7 @@ def get_tasks(
     config: AppConfig = Depends(get_config),
 ):
     cleanup = cleanup_expired_history(config)
+    archive_cleanup = cleanup_stale_archives(config)
     all_tasks = list_tasks(config, limit=limit)
 
     status_counts = {"total": 0, "queued": 0, "running": 0, "completed": 0,
@@ -99,7 +101,11 @@ def get_tasks(
     cleanup_text = ""
     if config.history_retention_days > 0:
         pruned = len(cleanup.pruned_requests)
-        cleanup_text = f"自动清理：保留最近 {config.history_retention_days} 天；本次清理 {pruned} 个文件。"
+        archive_count = len(archive_cleanup.deleted_paths)
+        cleanup_text = (
+            f"自动清理：保留最近 {config.history_retention_days} 天；"
+            f"本次清理 {pruned} 个任务、{archive_count} 个临时下载包。"
+        )
     else:
         cleanup_text = "自动清理：关闭。"
 

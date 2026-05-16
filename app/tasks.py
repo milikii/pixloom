@@ -13,6 +13,7 @@ from app.output_size import (
 )
 from app.output_quality import normalize_output_quality
 from app.request_logging import log_event
+from app.storage import delete_output_thumbnails
 
 
 TASK_STATUSES = {
@@ -534,6 +535,8 @@ def delete_task(config: AppConfig, request_id: str) -> TaskDeleteResult:
         if safe_path is None:
             skipped_paths.append(raw_path)
             continue
+        if root == config.output_dir:
+            deleted_paths.extend(delete_output_thumbnails(config, safe_path))
         try:
             safe_path.unlink()
         except FileNotFoundError:

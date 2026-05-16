@@ -3,6 +3,7 @@ import type {
   BatchCreateResponse,
   LogExcerptResponse,
   ModelListResponse,
+  StorageSnapshot,
   TaskDeleteResult,
   TaskListResponse,
   UploadResponse,
@@ -76,6 +77,10 @@ export const apiClient = {
 
   getTasks(limit = 60): Promise<TaskListResponse> {
     return request(`/tasks?limit=${limit}`);
+  },
+
+  getStorage(): Promise<StorageSnapshot> {
+    return request("/storage");
   },
 
   deleteTask(requestId: string): Promise<TaskDeleteResult> {

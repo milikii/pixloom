@@ -18,6 +18,7 @@ export function useTaskDelete() {
     mutationFn: (requestId: string) => apiClient.deleteTask(requestId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["storage"] });
     },
   });
 }
